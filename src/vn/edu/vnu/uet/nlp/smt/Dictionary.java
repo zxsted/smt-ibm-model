@@ -10,11 +10,11 @@ import java.util.Map;
 
 public class Dictionary {
 	private Map<String, Integer> dict;
-	private Map<Integer, String> converseDict;
+	private Map<Integer, String> reverseDict;
 
 	public Dictionary(String filename) {
 		dict = new HashMap<String, Integer>();
-		converseDict = new HashMap<Integer, String>();
+		reverseDict = new HashMap<Integer, String>();
 
 		BufferedReader br = null;
 
@@ -30,7 +30,7 @@ public class Dictionary {
 				for (String tok : tokens) {
 					if (!dict.containsKey(tok)) {
 						dict.put(tok, count);
-						converseDict.put(count, tok);
+						reverseDict.put(count, tok);
 						count++;
 					}
 				}
@@ -45,7 +45,7 @@ public class Dictionary {
 	}
 
 	public String getWord(int index) {
-		return converseDict.get(index);
+		return reverseDict.get(index);
 	}
 
 	public Map<String, Integer> getDict() {

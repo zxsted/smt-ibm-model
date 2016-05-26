@@ -47,7 +47,11 @@ public class Sentence {
 	public Map<String, Integer> getDict() {
 		return dict;
 	}
-	
+
+	public int length() {
+		return words.size();
+	}
+
 	@Override
 	public String toString() {
 		return content + "\n" + words + "\n" + dict;
