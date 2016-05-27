@@ -1,8 +1,18 @@
 package vn.edu.vnu.uet.nlp.smt;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+
 public class IBMModel2 extends IBMModel1 {
 
 	double[][][][] a; // a[i][j][le][lf]
+						// i: english word position
+						// j: foreign word position
 	double[][][][] countA; // countA[i][j][le][lf]
 	double[][][] totalA; // totalA[i][le][lf]
 
@@ -113,21 +123,17 @@ public class IBMModel2 extends IBMModel1 {
 				for (int l1 = 1; l1 < maxLe + 1; l1++) {
 					for (int j = 0; j < foDict.size(); j++) {
 						for (int i = 0; i < enDict.size(); i++) {
-							a[i][j][l1][l2] = countA[i][j][l1][l2] / totalA[j][l1][l2];
+							a[i][j][l1][l2] = countA[i][j][l1][l2] / totalA[i][l1][l2];
 						}
 					}
 				}
 			}
-
-			// printTransProbs();
 
 			iter++;
 			if (iter > MAX_ITER_2) {
 				CONVERGE = true;
 			}
 		}
-
-		// printTransProbs();
 	}
 
 	private void initTotalA() {
@@ -153,6 +159,25 @@ public class IBMModel2 extends IBMModel1 {
 					}
 				}
 			}
+		}
+	}
+
+	public void printModel(String filename) throws IOException {
+		Path path = Paths.get(filename);
+		BufferedWriter bw = Files.newBufferedWriter(path, StandardCharsets.UTF_8, StandardOpenOption.CREATE);
+		bw = Files.newBufferedWriter(path, StandardCharsets.UTF_8, StandardOpenOption.WRITE);
+		bw = Files.newBufferedWriter(path, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
+
+		for (int f = 0; f < foDict.size(); f++) {
+			bw.write(foDict.getWord(f) + ": ");
+
+			for (int e = 0; e < enDict.size(); e++) {
+				if (t[e][f] > 0.1) {
+					bw.write("(" + enDict.getWord(e) + ", " + t[e][f] + ")");
+				}
+			}
+			bw.newLine();
+			bw.flush();
 		}
 	}
 

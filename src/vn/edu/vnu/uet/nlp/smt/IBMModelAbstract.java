@@ -27,6 +27,8 @@ public abstract class IBMModelAbstract {
 	protected boolean CONVERGE = false;
 
 	public IBMModelAbstract(String enFile, String foFile) {
+		System.out.println("Reading training data...");
+		
 		initSentPairs(enFile, foFile);
 
 		enDict = new Dictionary(enFile);
@@ -104,7 +106,7 @@ public abstract class IBMModelAbstract {
 	}
 
 	public void printDicts() {
-		System.out.println("English dictionary:\n" + enDict);
-		System.out.println("Foreign dictionary:\n" + foDict);
+		System.out.println("English dictionary:\n" + enDict.size());
+		System.out.println("Foreign dictionary:\n" + foDict.size());
 	}
 }
