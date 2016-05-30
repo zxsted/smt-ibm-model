@@ -8,7 +8,11 @@ import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import gnu.trove.map.hash.TObjectDoubleHashMap;
 
 public abstract class IBMModelAbstract {
 	NumberFormat formatter = new DecimalFormat("#0.0000");
@@ -18,9 +22,9 @@ public abstract class IBMModelAbstract {
 	Dictionary enDict;
 	Dictionary foDict;
 
-	double[][] t;
-	double[][] count;
-	double[] total;
+	TObjectDoubleHashMap<WordPair> t;
+	TObjectDoubleHashMap<WordPair> count;
+	Map<Integer, Double> total;
 
 	static final int MAX_ITER_1 = 10;
 	static final int MAX_ITER_2 = 100;
@@ -28,11 +32,11 @@ public abstract class IBMModelAbstract {
 
 	public IBMModelAbstract(String enFile, String foFile) {
 		System.out.println("Reading training data...");
-		
-		initSentPairs(enFile, foFile);
 
 		enDict = new Dictionary(enFile);
 		foDict = new Dictionary(foFile);
+
+		initSentPairs(enFile, foFile);
 
 		initTransProbs();
 	}
@@ -40,22 +44,22 @@ public abstract class IBMModelAbstract {
 	public abstract void train();
 
 	protected void initCount() {
-		count = new double[enDict.size()][foDict.size()];
+		count = new TObjectDoubleHashMap<WordPair>();
 	}
 
 	protected void initTotal() {
-		total = new double[foDict.size()];
+		total = new HashMap<Integer, Double>();
 	}
 
 	private void initTransProbs() {
-		t = new double[enDict.size()][foDict.size()];
+		t = new TObjectDoubleHashMap<WordPair>();
 
 		// uniform distribution
 		double value = 1 / (double) enDict.size();
 
-		for (int i = 0; i < enDict.size(); i++) {
-			for (int j = 0; j < foDict.size(); j++) {
-				t[i][j] = value;
+		for (int e = 0; e < enDict.size(); e++) {
+			for (int f = 0; f < foDict.size(); f++) {
+				t.put(new WordPair(e, f), value);
 			}
 		}
 	}
@@ -70,7 +74,21 @@ public abstract class IBMModelAbstract {
 			String enLine, foLine;
 
 			while ((enLine = enBr.readLine()) != null && (foLine = foBr.readLine()) != null) {
-				sentPairs.add(new SentencePair(new Sentence(enLine), new Sentence(foLine)));
+				String[] enLineWords = enLine.split("\\s+");
+				String[] foLineWords = foLine.split("\\s+");
+
+				int[] enArray = new int[enLineWords.length];
+				int[] foArray = new int[foLineWords.length];
+
+				for (int i = 0; i < enArray.length; i++) {
+					enArray[i] = enDict.getIndex(enLineWords[i]);
+				}
+
+				for (int i = 0; i < foArray.length; i++) {
+					foArray[i] = foDict.getIndex(foLineWords[i]);
+				}
+
+				sentPairs.add(new SentencePair(new Sentence(enArray), new Sentence(foArray)));
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -79,7 +97,11 @@ public abstract class IBMModelAbstract {
 	}
 
 	public double getProb(String enWord, String foWord) {
-		return t[enDict.getIndex(enWord)][foDict.getIndex(foWord)];
+		return t.get(new WordPair(enDict.getIndex(enWord), foDict.getIndex(foWord)));
+	}
+
+	public double getProb(int e, int f) {
+		return t.get(new WordPair(e, f));
 	}
 
 	public Dictionary getEngDict() {
@@ -92,14 +114,14 @@ public abstract class IBMModelAbstract {
 
 	public void printTransProbs() {
 		System.out.print("\t");
-		for (int i = 0; i < enDict.size(); i++) {
-			System.out.print(enDict.getWord(i) + "\t");
+		for (int e = 0; e < enDict.size(); e++) {
+			System.out.print(enDict.getWord(e) + "\t");
 		}
 		System.out.println();
-		for (int j = 0; j < foDict.size(); j++) {
-			System.out.print(foDict.getWord(j) + "\t");
-			for (int i = 0; i < enDict.size(); i++) {
-				System.out.print(formatter.format(t[i][j]) + "\t");
+		for (int f = 0; f < foDict.size(); f++) {
+			System.out.print(foDict.getWord(f) + "\t");
+			for (int e = 0; e < enDict.size(); e++) {
+				System.out.print(formatter.format(getProb(e, f)) + "\t");
 			}
 			System.out.println();
 		}

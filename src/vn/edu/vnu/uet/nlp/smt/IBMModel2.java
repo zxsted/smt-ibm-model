@@ -7,14 +7,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.HashMap;
+import java.util.Map;
+
+import gnu.trove.map.hash.TObjectDoubleHashMap;
 
 public class IBMModel2 extends IBMModel1 {
 
-	double[][][][] a; // a[i][j][le][lf]
-						// i: english word position
-						// j: foreign word position
-	double[][][][] countA; // countA[i][j][le][lf]
-	double[][][] totalA; // totalA[i][le][lf]
+	TObjectDoubleHashMap<TwoPositionsAndTwoLengths> a;
+	TObjectDoubleHashMap<TwoPositionsAndTwoLengths> countA;
+	TObjectDoubleHashMap<OnePositionAndTwoLengths> totalA;
 
 	int maxLe = 0, maxLf = 0;
 
@@ -35,14 +37,15 @@ public class IBMModel2 extends IBMModel1 {
 			}
 		}
 
-		a = new double[enDict.size()][foDict.size()][maxLe + 1][maxLf + 1];
+		a = new TObjectDoubleHashMap<TwoPositionsAndTwoLengths>();
 
-		for (int lf = 1; lf < maxLf + 1; lf++) {
+		for (int lf = 1; lf <= maxLf; lf++) {
 			double value = 1 / (double) (lf + 1);
-			for (int le = 1; le < maxLe + 1; le++) {
-				for (int j = 0; j < foDict.size(); j++) {
-					for (int i = 0; i < enDict.size(); i++) {
-						a[i][j][le][lf] = value;
+			for (int le = 1; le <= maxLe; le++) {
+				for (int i = 1; i <= maxLf; i++) {
+					for (int j = 1; j <= maxLe; j++) {
+						TwoPositionsAndTwoLengths obj = new TwoPositionsAndTwoLengths(i, j, le, lf);
+						a.put(obj, value);
 					}
 				}
 			}
@@ -70,43 +73,63 @@ public class IBMModel2 extends IBMModel1 {
 				int le = p.getE().length();
 				int lf = p.getF().length();
 
-				double[] subTotal = new double[p.getE().dictSize()];
+				Map<Integer, Double> subTotal = new HashMap<Integer, Double>();
 
 				// compute normalization
-				for (int i1 = 0; i1 < le; i1++) {
-					String e = p.getE().getWords().get(i1);
-					int subIndexE = p.getE().getIndexInDict(e);
-					int indexE = enDict.getIndex(e);
+				for (int j = 1; j <= le; j++) {
+					int e = p.getE().get(j);
+					subTotal.put(e, 0.0);
 
-					subTotal[subIndexE] = 0;
+					for (int i = 1; i <= lf; i++) {
+						int f = p.getF().get(i);
 
-					for (int j1 = 0; j1 < lf; j1++) {
-						String f = p.getF().getWords().get(j1);
-						int indexF = foDict.getIndex(f);
+						WordPair ef = new WordPair(e, f);
+						TwoPositionsAndTwoLengths pos = new TwoPositionsAndTwoLengths(i, j, le, lf);
 
-						double x1 = t[indexE][indexF];
-						double x2 = a[i1][j1][le][lf];
+						double x1 = t.get(ef);
+						double x2 = a.get(pos);
 
-						subTotal[subIndexE] += x1 * x2;
+						subTotal.put(e, subTotal.get(e) + x1 * x2);
 					}
 				}
 
 				// collect counts
-				for (int i2 = 0; i2 < le; i2++) {
-					String e = p.getE().getWords().get(i2);
-					int subIndexE = p.getE().getIndexInDict(e);
-					int indexE = enDict.getIndex(e);
+				for (int j = 1; j <= le; j++) {
+					int e = p.getE().get(j);
 
-					for (int j2 = 0; j2 < lf; j2++) {
-						String f = p.getF().getWords().get(j2);
-						int indexF = foDict.getIndex(f);
+					for (int i = 1; i <= lf; i++) {
+						int f = p.getF().get(i);
 
-						double c = t[indexE][indexF] * a[i2][j2][le][lf] / subTotal[subIndexE];
+						WordPair ef = new WordPair(e, f);
+						TwoPositionsAndTwoLengths pos = new TwoPositionsAndTwoLengths(i, j, le, lf);
 
-						count[indexE][indexF] += c;
-						total[indexF] += c;
-						countA[i2][j2][le][lf] += c;
-						totalA[i2][le][lf] += c;
+						double c = t.get(ef) * a.get(pos) / subTotal.get(e);
+
+						if (count.containsKey(ef)) {
+							count.put(ef, count.get(ef) + c);
+						} else {
+							count.put(ef, c);
+						}
+
+						if (total.containsKey(f)) {
+							total.put(f, total.get(f) + c);
+						} else {
+							total.put(f, c);
+						}
+
+						if (countA.containsKey(pos)) {
+							countA.put(pos, countA.get(pos) + c);
+						} else {
+							countA.put(pos, c);
+						}
+
+						OnePositionAndTwoLengths onePos = new OnePositionAndTwoLengths(j, le, lf);
+
+						if (totalA.contains(onePos)) {
+							totalA.put(onePos, totalA.get(onePos) + c);
+						} else {
+							totalA.put(onePos, c);
+						}
 					}
 				}
 
@@ -115,15 +138,22 @@ public class IBMModel2 extends IBMModel1 {
 			// estimate probabilities
 			for (int f = 0; f < foDict.size(); f++) {
 				for (int e = 0; e < enDict.size(); e++) {
-					t[e][f] = count[e][f] / total[f];
+					WordPair ef = new WordPair(e, f);
+					double value = count.get(ef) / total.get(f);
+					t.put(ef, value);
 				}
 			}
 
-			for (int l2 = 1; l2 < maxLf + 1; l2++) {
-				for (int l1 = 1; l1 < maxLe + 1; l1++) {
-					for (int j = 0; j < foDict.size(); j++) {
-						for (int i = 0; i < enDict.size(); i++) {
-							a[i][j][l1][l2] = countA[i][j][l1][l2] / totalA[i][l1][l2];
+			for (int lf = 1; lf <= maxLf; lf++) {
+				for (int le = 1; le <= maxLe; le++) {
+					for (int i = 1; i <= maxLf; i++) {
+						for (int j = 1; j <= maxLe; j++) {
+							TwoPositionsAndTwoLengths pos = new TwoPositionsAndTwoLengths(i, j, le, lf);
+							OnePositionAndTwoLengths onePos = new OnePositionAndTwoLengths(j, le, lf);
+
+							double value = countA.get(pos) / totalA.get(onePos);
+
+							a.put(pos, value);
 						}
 					}
 				}
@@ -134,14 +164,16 @@ public class IBMModel2 extends IBMModel1 {
 				CONVERGE = true;
 			}
 		}
+
+		printTransProbs();
 	}
 
 	private void initTotalA() {
-		totalA = new double[enDict.size()][maxLe + 1][maxLf + 1];
+		totalA = new TObjectDoubleHashMap<OnePositionAndTwoLengths>();
 	}
 
 	private void initCountA() {
-		countA = new double[enDict.size()][foDict.size()][maxLe + 1][maxLf + 1];
+		countA = new TObjectDoubleHashMap<TwoPositionsAndTwoLengths>();
 	}
 
 	@Override
@@ -150,12 +182,14 @@ public class IBMModel2 extends IBMModel1 {
 		super.printTransProbs();
 
 		System.out.println("Alignment probabilities:");
-		for (int lf = 1; lf < maxLf + 1; lf++) {
-			for (int le = 1; le < maxLe + 1; le++) {
-				for (int j = 0; j < foDict.size(); j++) {
-					for (int i = 0; i < enDict.size(); i++) {
-						if (a[i][j][le][lf] <= 1)
-							System.out.println("a(" + j + "|" + i + ", " + le + ", " + lf + ") = " + a[i][j][le][lf]);
+		for (int lf = 1; lf <= maxLf; lf++) {
+			for (int le = 1; le <= maxLe; le++) {
+				for (int i = 1; i <= maxLf; i++) {
+					for (int j = 1; j <= maxLe; j++) {
+						double value = a.get(new TwoPositionsAndTwoLengths(i, j, le, lf));
+						if (value <= 1) {
+							System.out.println("a(" + j + "|" + i + ", " + le + ", " + lf + ") = " + value);
+						}
 					}
 				}
 			}
@@ -172,8 +206,8 @@ public class IBMModel2 extends IBMModel1 {
 			bw.write(foDict.getWord(f) + ": ");
 
 			for (int e = 0; e < enDict.size(); e++) {
-				if (t[e][f] > 0.1) {
-					bw.write("(" + enDict.getWord(e) + ", " + t[e][f] + ")");
+				if (getProb(e, f) > 0.1) {
+					bw.write("(" + enDict.getWord(e) + ", " + getProb(e, f) + ")");
 				}
 			}
 			bw.newLine();

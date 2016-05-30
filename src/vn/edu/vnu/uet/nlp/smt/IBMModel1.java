@@ -1,5 +1,8 @@
 package vn.edu.vnu.uet.nlp.smt;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class IBMModel1 extends IBMModelAbstract {
 	public IBMModel1(String enFile, String foFile) {
 		super(enFile, foFile);
@@ -8,7 +11,6 @@ public class IBMModel1 extends IBMModelAbstract {
 	@Override
 	public void train() {
 		System.out.println("Start training IBM Model 1. Initial translation probabilities:");
-//		printTransProbs();
 
 		int iter = 1;
 		while (!CONVERGE) {
@@ -19,28 +21,39 @@ public class IBMModel1 extends IBMModelAbstract {
 
 			for (SentencePair p : sentPairs) {
 				// compute normalization
-				double[] subTotal = new double[p.getE().dictSize()];
+				Map<Integer, Double> subTotal = new HashMap<Integer, Double>();
 
-				for (String e : p.getE().getWords()) {
-					int indexE = enDict.getIndex(e);
-					int subIndexE = p.getE().getIndexInDict(e);
-					subTotal[subIndexE] = 0;
+				for (int j = 1; j <= p.getE().length(); j++) {
+					int e = p.getE().get(j);
+					subTotal.put(e, 0.0);
 
-					for (String f : p.getF().getWords()) {
-						int indexF = foDict.getIndex(f);
-						subTotal[subIndexE] += t[indexE][indexF];
+					for (int i = 1; i <= p.getF().length(); i++) {
+						int f = p.getF().get(i);
+
+						subTotal.put(e, subTotal.get(e) + t.get(new WordPair(e, f)));
 					}
 				}
 
 				// collect counts
-				for (String e : p.getE().getWords()) {
-					int indexE = enDict.getIndex(e);
-					int subIndexE = p.getE().getIndexInDict(e);
+				for (int j = 1; j <= p.getE().length(); j++) {
+					int e = p.getE().get(j);
 
-					for (String f : p.getF().getWords()) {
-						int indexF = foDict.getIndex(f);
-						count[indexE][indexF] += t[indexE][indexF] / subTotal[subIndexE];
-						total[indexF] += t[indexE][indexF] / subTotal[subIndexE];
+					for (int i = 1; i <= p.getF().length(); i++) {
+						int f = p.getF().get(i);
+						WordPair ef = new WordPair(e, f);
+						double c = t.get(ef) / subTotal.get(e);
+
+						if (count.containsKey(ef)) {
+							count.put(ef, count.get(ef) + c);
+						} else {
+							count.put(ef, c);
+						}
+
+						if (total.containsKey(f)) {
+							total.put(f, total.get(f) + c);
+						} else {
+							total.put(f, c);
+						}
 					}
 				}
 			}
@@ -48,7 +61,9 @@ public class IBMModel1 extends IBMModelAbstract {
 			// estimate probabilities
 			for (int f = 0; f < foDict.size(); f++) {
 				for (int e = 0; e < enDict.size(); e++) {
-					t[e][f] = count[e][f] / total[f];
+					WordPair ef = new WordPair(e, f);
+					double value = count.get(ef) / total.get(f);
+					t.put(ef, value);
 				}
 			}
 
@@ -57,8 +72,8 @@ public class IBMModel1 extends IBMModelAbstract {
 				CONVERGE = true;
 			}
 		}
-		
-//		printTransProbs();
+
+		printTransProbs();
 
 		CONVERGE = false; // to be continuously used in IBM Model 2
 	}
