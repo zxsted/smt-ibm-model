@@ -1,21 +1,24 @@
 package vn.edu.vnu.uet.nlp.smt;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Sentence {
-	private int[] content;
+	private List<Integer> content;
 
 	public Sentence(int[] array) {
-		content = new int[array.length];
+		content = new ArrayList<Integer>(array.length);
 
-		for (int i = 0; i < content.length; i++) {
-			content[i] = array[i];
+		for (int i = 0; i < array.length; i++) {
+			content.add(array[i]);
 		}
 	}
 
 	public int get(int index) {
-		return content[index - 1];
+		return content.get(index - 1);
 	}
 
 	public int length() {
-		return content.length;
+		return content.size();
 	}
 }

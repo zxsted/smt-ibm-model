@@ -25,6 +25,5 @@
 			<artifactId>trove4j</artifactId>
 			<version>3.0.3</version>
 		</dependency>
-
 	</dependencies>
 </project>

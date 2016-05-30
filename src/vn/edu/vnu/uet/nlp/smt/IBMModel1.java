@@ -1,7 +1,6 @@
 package vn.edu.vnu.uet.nlp.smt;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Set;
 
 public class IBMModel1 extends IBMModelAbstract {
 	public IBMModel1(String enFile, String foFile) {
@@ -10,40 +9,38 @@ public class IBMModel1 extends IBMModelAbstract {
 
 	@Override
 	public void train() {
+		printDictsInfo();
+		
 		System.out.println("Start training IBM Model 1...");
-
+		// printTransProbs();
 		int iter = 1;
 		while (!CONVERGE) {
 			System.out.print("Iteration " + iter);
 
 			long start = System.currentTimeMillis();
-			
-			initCount();
-			initTotal();
+
+			if (iter > 1) {
+				initCount();
+				initTotal();
+			}
 
 			for (SentencePair p : sentPairs) {
-				// compute normalization
-				Map<Integer, Double> subTotal = new HashMap<Integer, Double>();
+				double subTotal;
 
 				for (int j = 1; j <= p.getE().length(); j++) {
-					int e = p.getE().get(j);
-					subTotal.put(e, 0.0);
+					subTotal = 0;
 
+					// compute normalization
 					for (int i = 1; i <= p.getF().length(); i++) {
-						int f = p.getF().get(i);
-
-						subTotal.put(e, subTotal.get(e) + t.get(new WordPair(e, f)));
+						WordPair ef = p.getWordPair(j, i);
+						subTotal += t.get(ef);
 					}
-				}
 
-				// collect counts
-				for (int j = 1; j <= p.getE().length(); j++) {
-					int e = p.getE().get(j);
-
+					// collect counts
 					for (int i = 1; i <= p.getF().length(); i++) {
 						int f = p.getF().get(i);
-						WordPair ef = new WordPair(e, f);
-						double c = t.get(ef) / subTotal.get(e);
+						WordPair ef = p.getWordPair(j, i);
+						double c = t.get(ef) / subTotal;
 
 						if (count.containsKey(ef)) {
 							count.put(ef, count.get(ef) + c);
@@ -51,30 +48,26 @@ public class IBMModel1 extends IBMModelAbstract {
 							count.put(ef, c);
 						}
 
-						if (total.containsKey(f)) {
-							total.put(f, total.get(f) + c);
-						} else {
-							total.put(f, c);
-						}
+						total[f] += c;
 					}
 				}
 			}
 
 			// estimate probabilities
-			for (int f = 0; f < foDict.size(); f++) {
-				for (int e = 0; e < enDict.size(); e++) {
-					WordPair ef = new WordPair(e, f);
-					double value = count.get(ef) / total.get(f);
-					t.put(ef, value);
-				}
+			Set<WordPair> keySet = count.keySet();
+
+			for (WordPair ef : keySet) {
+				double value = count.get(ef) / total[ef.getF()];
+				t.put(ef, value);
 			}
-			
+
 			long end = System.currentTimeMillis();
-			
+
 			long time = end - start;
-			
+
 			System.out.println(" [" + time + " ms]");
 
+			// printTransProbs();
 			iter++;
 			if (iter > MAX_ITER_1) {
 				CONVERGE = true;

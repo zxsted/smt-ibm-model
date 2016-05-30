@@ -1,29 +1,18 @@
 package vn.edu.vnu.uet.nlp.smt;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.util.HashMap;
-import java.util.Map;
-
-import gnu.trove.map.hash.TObjectDoubleHashMap;
+import java.util.Set;
 
 public class IBMModel2 extends IBMModel1 {
 
-	TObjectDoubleHashMap<TwoPositionsAndTwoLengths> a;
-	TObjectDoubleHashMap<TwoPositionsAndTwoLengths> countA;
-	TObjectDoubleHashMap<OnePositionAndTwoLengths> totalA;
+	double[][][][] a;
+	double[][][][] countA;
+	double[][][] totalA;
 
 	int maxLe = 0, maxLf = 0;
 
 	public IBMModel2(String enFile, String foFile) {
 		super(enFile, foFile);
 
-		initAlignment();
 	}
 
 	private void initAlignment() {
@@ -37,15 +26,14 @@ public class IBMModel2 extends IBMModel1 {
 			}
 		}
 
-		a = new TObjectDoubleHashMap<TwoPositionsAndTwoLengths>();
+		a = new double[maxLf + 1][maxLe + 1][maxLe + 1][maxLf + 1];
 
 		for (int lf = 1; lf <= maxLf; lf++) {
 			double value = 1 / (double) (lf + 1);
 			for (int le = 1; le <= maxLe; le++) {
 				for (int i = 1; i <= maxLf; i++) {
 					for (int j = 1; j <= maxLe; j++) {
-						TwoPositionsAndTwoLengths obj = new TwoPositionsAndTwoLengths(i, j, le, lf);
-						a.put(obj, value);
+						a[i][j][le][lf] = value;
 					}
 				}
 			}
@@ -55,9 +43,9 @@ public class IBMModel2 extends IBMModel1 {
 	@Override
 	public void train() {
 		super.train();
+		initAlignment();
 
 		System.out.println("Start training IBM Model 2...");
-
 		int iter = 1;
 		while (!CONVERGE) {
 			System.out.print("Iteration " + iter);
@@ -75,37 +63,23 @@ public class IBMModel2 extends IBMModel1 {
 				int le = p.getE().length();
 				int lf = p.getF().length();
 
-				Map<Integer, Double> subTotal = new HashMap<Integer, Double>();
+				double subTotal;
 
 				// compute normalization
 				for (int j = 1; j <= le; j++) {
-					int e = p.getE().get(j);
-					subTotal.put(e, 0.0);
+					subTotal = 0;
 
 					for (int i = 1; i <= lf; i++) {
-						int f = p.getF().get(i);
-
-						WordPair ef = new WordPair(e, f);
-						TwoPositionsAndTwoLengths pos = new TwoPositionsAndTwoLengths(i, j, le, lf);
-
-						double x1 = t.get(ef);
-						double x2 = a.get(pos);
-
-						subTotal.put(e, subTotal.get(e) + x1 * x2);
+						WordPair ef = p.getWordPair(j, i);
+						subTotal += t.get(ef) * a[i][j][le][lf];
 					}
-				}
 
-				// collect counts
-				for (int j = 1; j <= le; j++) {
-					int e = p.getE().get(j);
-
+					// collect counts
 					for (int i = 1; i <= lf; i++) {
 						int f = p.getF().get(i);
+						WordPair ef = p.getWordPair(j, i);
 
-						WordPair ef = new WordPair(e, f);
-						TwoPositionsAndTwoLengths pos = new TwoPositionsAndTwoLengths(i, j, le, lf);
-
-						double c = t.get(ef) * a.get(pos) / subTotal.get(e);
+						double c = t.get(ef) * a[i][j][le][lf] / subTotal;
 
 						if (count.containsKey(ef)) {
 							count.put(ef, count.get(ef) + c);
@@ -113,49 +87,27 @@ public class IBMModel2 extends IBMModel1 {
 							count.put(ef, c);
 						}
 
-						if (total.containsKey(f)) {
-							total.put(f, total.get(f) + c);
-						} else {
-							total.put(f, c);
-						}
+						total[f] += c;
 
-						if (countA.containsKey(pos)) {
-							countA.put(pos, countA.get(pos) + c);
-						} else {
-							countA.put(pos, c);
-						}
-
-						OnePositionAndTwoLengths onePos = new OnePositionAndTwoLengths(j, le, lf);
-
-						if (totalA.contains(onePos)) {
-							totalA.put(onePos, totalA.get(onePos) + c);
-						} else {
-							totalA.put(onePos, c);
-						}
+						countA[i][j][le][lf] += c;
+						totalA[j][le][lf] += c;
 					}
 				}
-
 			}
 
 			// estimate probabilities
-			for (int f = 0; f < foDict.size(); f++) {
-				for (int e = 0; e < enDict.size(); e++) {
-					WordPair ef = new WordPair(e, f);
-					double value = count.get(ef) / total.get(f);
-					t.put(ef, value);
-				}
+			Set<WordPair> keySet = count.keySet();
+
+			for (WordPair ef : keySet) {
+				double value = count.get(ef) / total[ef.getF()];
+				t.put(ef, value);
 			}
 
 			for (int lf = 1; lf <= maxLf; lf++) {
 				for (int le = 1; le <= maxLe; le++) {
 					for (int i = 1; i <= maxLf; i++) {
 						for (int j = 1; j <= maxLe; j++) {
-							TwoPositionsAndTwoLengths pos = new TwoPositionsAndTwoLengths(i, j, le, lf);
-							OnePositionAndTwoLengths onePos = new OnePositionAndTwoLengths(j, le, lf);
-
-							double value = countA.get(pos) / totalA.get(onePos);
-
-							a.put(pos, value);
+							a[i][j][le][lf] = countA[i][j][le][lf] / totalA[j][le][lf];
 						}
 					}
 				}
@@ -167,20 +119,23 @@ public class IBMModel2 extends IBMModel1 {
 
 			System.out.println(" [" + time + " ms]");
 
+			// printTransProbs();
+
 			iter++;
 			if (iter > MAX_ITER_2) {
 				CONVERGE = true;
 			}
 		}
-
 	}
 
 	private void initTotalA() {
-		totalA = new TObjectDoubleHashMap<OnePositionAndTwoLengths>();
+		// totalA = new TObjectDoubleHashMap<OnePositionAndTwoLengths>();
+		totalA = new double[maxLe + 1][maxLe + 1][maxLf + 1];
 	}
 
 	private void initCountA() {
-		countA = new TObjectDoubleHashMap<TwoPositionsAndTwoLengths>();
+		// countA = new TObjectDoubleHashMap<TwoPositionsAndTwoLengths>();
+		countA = new double[maxLf + 1][maxLe + 1][maxLe + 1][maxLf + 1];
 	}
 
 	@Override
@@ -193,34 +148,12 @@ public class IBMModel2 extends IBMModel1 {
 			for (int le = 1; le <= maxLe; le++) {
 				for (int i = 1; i <= maxLf; i++) {
 					for (int j = 1; j <= maxLe; j++) {
-						double value = a.get(new TwoPositionsAndTwoLengths(i, j, le, lf));
-						if (value <= 1) {
-							System.out.println("a(" + j + "|" + i + ", " + le + ", " + lf + ") = " + value);
+						if (a[i][j][le][lf] <= 1) {
+							System.out.println("a(" + j + "|" + i + ", " + le + ", " + lf + ") = " + a[i][j][le][lf]);
 						}
 					}
 				}
 			}
-		}
-	}
-
-	public void saveModel(String filename) throws IOException {
-		System.out.println("Saving model...");
-
-		Path path = Paths.get(filename);
-		BufferedWriter bw = Files.newBufferedWriter(path, StandardCharsets.UTF_8, StandardOpenOption.CREATE);
-		bw = Files.newBufferedWriter(path, StandardCharsets.UTF_8, StandardOpenOption.WRITE);
-		bw = Files.newBufferedWriter(path, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
-
-		for (int f = 0; f < foDict.size(); f++) {
-			bw.write(foDict.getWord(f) + ": ");
-
-			for (int e = 0; e < enDict.size(); e++) {
-				if (getProb(e, f) > 0.01) {
-					bw.write("(" + enDict.getWord(e) + ", " + getProb(e, f) + ")");
-				}
-			}
-			bw.newLine();
-			bw.flush();
 		}
 	}
 

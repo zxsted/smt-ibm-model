@@ -8,9 +8,8 @@ import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 
 import gnu.trove.map.hash.TObjectDoubleHashMap;
 
@@ -24,10 +23,10 @@ public abstract class IBMModelAbstract {
 
 	TObjectDoubleHashMap<WordPair> t;
 	TObjectDoubleHashMap<WordPair> count;
-	Map<Integer, Double> total;
+	double[] total;
 
-	static final int MAX_ITER_1 = 10;
-	static final int MAX_ITER_2 = 10;
+	static final int MAX_ITER_1 = 3;
+	static final int MAX_ITER_2 = 3;
 	protected boolean CONVERGE = false;
 
 	public IBMModelAbstract(String enFile, String foFile) {
@@ -39,16 +38,37 @@ public abstract class IBMModelAbstract {
 		initSentPairs(enFile, foFile);
 
 		initTransProbs();
+
+		initCount();
+		initTotal();
 	}
 
 	public abstract void train();
 
 	protected void initCount() {
-		count = new TObjectDoubleHashMap<WordPair>();
+		if (count == null) {
+			count = new TObjectDoubleHashMap<WordPair>();
+
+			for (SentencePair p : sentPairs) {
+				for (int j = 1; j <= p.getE().length(); j++) {
+					for (int i = 1; i <= p.getF().length(); i++) {
+						WordPair ef = p.getWordPair(j, i);
+						count.put(ef, 0.0);
+					}
+				}
+			}
+
+		} else {
+			Set<WordPair> keySet = count.keySet();
+
+			for (WordPair ef : keySet) {
+				count.put(ef, 0.0);
+			}
+		}
 	}
 
 	protected void initTotal() {
-		total = new HashMap<Integer, Double>();
+		total = new double[foDict.size()];
 	}
 
 	private void initTransProbs() {
@@ -57,9 +77,12 @@ public abstract class IBMModelAbstract {
 		// uniform distribution
 		double value = 1 / (double) enDict.size();
 
-		for (int e = 0; e < enDict.size(); e++) {
-			for (int f = 0; f < foDict.size(); f++) {
-				t.put(new WordPair(e, f), value);
+		for (SentencePair p : sentPairs) {
+			for (int j = 1; j <= p.getE().length(); j++) {
+				for (int i = 1; i <= p.getF().length(); i++) {
+					WordPair ef = p.getWordPair(j, i);
+					t.put(ef, value);
+				}
 			}
 		}
 	}
@@ -97,11 +120,15 @@ public abstract class IBMModelAbstract {
 	}
 
 	public double getProb(String enWord, String foWord) {
-		return t.get(new WordPair(enDict.getIndex(enWord), foDict.getIndex(foWord)));
+		return getProb(enDict.getIndex(enWord), foDict.getIndex(foWord));
 	}
 
 	public double getProb(int e, int f) {
-		return t.get(new WordPair(e, f));
+		WordPair ef = new WordPair(e, f);
+		if (t.contains(ef)) {
+			return t.get(ef);
+		}
+		return 0;
 	}
 
 	public Dictionary getEngDict() {
@@ -127,8 +154,8 @@ public abstract class IBMModelAbstract {
 		}
 	}
 
-	public void printDicts() {
-		System.out.println("English dictionary:\n" + enDict.size());
-		System.out.println("Foreign dictionary:\n" + foDict.size());
+	public void printDictsInfo() {
+		System.out.println("English dictionary size: " + enDict.size());
+		System.out.println("Foreign dictionary size: " + foDict.size());
 	}
 }
