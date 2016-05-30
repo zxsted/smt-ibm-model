@@ -10,12 +10,14 @@ public class IBMModel1 extends IBMModelAbstract {
 
 	@Override
 	public void train() {
-		System.out.println("Start training IBM Model 1. Initial translation probabilities:");
+		System.out.println("Start training IBM Model 1...");
 
 		int iter = 1;
 		while (!CONVERGE) {
-			System.out.println("Iteration " + iter);
+			System.out.print("Iteration " + iter);
 
+			long start = System.currentTimeMillis();
+			
 			initCount();
 			initTotal();
 
@@ -66,14 +68,18 @@ public class IBMModel1 extends IBMModelAbstract {
 					t.put(ef, value);
 				}
 			}
+			
+			long end = System.currentTimeMillis();
+			
+			long time = end - start;
+			
+			System.out.println(" [" + time + " ms]");
 
 			iter++;
 			if (iter > MAX_ITER_1) {
 				CONVERGE = true;
 			}
 		}
-
-		printTransProbs();
 
 		CONVERGE = false; // to be continuously used in IBM Model 2
 	}

@@ -27,7 +27,7 @@ public abstract class IBMModelAbstract {
 	Map<Integer, Double> total;
 
 	static final int MAX_ITER_1 = 10;
-	static final int MAX_ITER_2 = 100;
+	static final int MAX_ITER_2 = 10;
 	protected boolean CONVERGE = false;
 
 	public IBMModelAbstract(String enFile, String foFile) {

@@ -56,11 +56,13 @@ public class IBMModel2 extends IBMModel1 {
 	public void train() {
 		super.train();
 
-		System.out.println("Start training IBM Model 2.");
+		System.out.println("Start training IBM Model 2...");
 
 		int iter = 1;
 		while (!CONVERGE) {
-			System.out.println("Iteration " + iter);
+			System.out.print("Iteration " + iter);
+
+			long start = System.currentTimeMillis();
 
 			// initialize
 			initCount();
@@ -159,13 +161,18 @@ public class IBMModel2 extends IBMModel1 {
 				}
 			}
 
+			long end = System.currentTimeMillis();
+
+			long time = end - start;
+
+			System.out.println(" [" + time + " ms]");
+
 			iter++;
 			if (iter > MAX_ITER_2) {
 				CONVERGE = true;
 			}
 		}
 
-		printTransProbs();
 	}
 
 	private void initTotalA() {
@@ -196,7 +203,9 @@ public class IBMModel2 extends IBMModel1 {
 		}
 	}
 
-	public void printModel(String filename) throws IOException {
+	public void saveModel(String filename) throws IOException {
+		System.out.println("Saving model...");
+
 		Path path = Paths.get(filename);
 		BufferedWriter bw = Files.newBufferedWriter(path, StandardCharsets.UTF_8, StandardOpenOption.CREATE);
 		bw = Files.newBufferedWriter(path, StandardCharsets.UTF_8, StandardOpenOption.WRITE);
@@ -206,7 +215,7 @@ public class IBMModel2 extends IBMModel1 {
 			bw.write(foDict.getWord(f) + ": ");
 
 			for (int e = 0; e < enDict.size(); e++) {
-				if (getProb(e, f) > 0.1) {
+				if (getProb(e, f) > 0.01) {
 					bw.write("(" + enDict.getWord(e) + ", " + getProb(e, f) + ")");
 				}
 			}
