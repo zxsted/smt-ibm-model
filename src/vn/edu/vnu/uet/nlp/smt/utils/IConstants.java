@@ -1,4 +1,4 @@
-package vn.edu.vnu.uet.nlp.smt;
+package vn.edu.vnu.uet.nlp.smt.utils;
 
 public interface IConstants {
 	static final String transProbsModelName = "trans_prob.smt";

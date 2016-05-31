@@ -1,6 +1,9 @@
-package vn.edu.vnu.uet.nlp.smt;
+package vn.edu.vnu.uet.nlp.smt.ibm;
 
 import java.util.Set;
+
+import vn.edu.vnu.uet.nlp.smt.structs.SentencePair;
+import vn.edu.vnu.uet.nlp.smt.structs.WordPair;
 
 public class IBMModel1 extends IBMModelAbstract {
 	public IBMModel1(String enFile, String foFile) {

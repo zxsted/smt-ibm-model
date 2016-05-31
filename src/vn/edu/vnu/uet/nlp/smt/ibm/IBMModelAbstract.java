@@ -1,4 +1,4 @@
-package vn.edu.vnu.uet.nlp.smt;
+package vn.edu.vnu.uet.nlp.smt.ibm;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -13,6 +13,12 @@ import java.util.List;
 import java.util.Set;
 
 import gnu.trove.map.hash.TObjectDoubleHashMap;
+import vn.edu.vnu.uet.nlp.smt.structs.Dictionary;
+import vn.edu.vnu.uet.nlp.smt.structs.Sentence;
+import vn.edu.vnu.uet.nlp.smt.structs.SentencePair;
+import vn.edu.vnu.uet.nlp.smt.structs.WordPair;
+import vn.edu.vnu.uet.nlp.smt.utils.IConstants;
+import vn.edu.vnu.uet.nlp.smt.utils.Utils;
 
 public abstract class IBMModelAbstract {
 	NumberFormat formatter = new DecimalFormat("#0.0000");

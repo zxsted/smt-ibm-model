@@ -1,4 +1,4 @@
-package vn.edu.vnu.uet.nlp.smt;
+package vn.edu.vnu.uet.nlp.smt.structs;
 
 import java.io.BufferedReader;
 import java.io.IOException;

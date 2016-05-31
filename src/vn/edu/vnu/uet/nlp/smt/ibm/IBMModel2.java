@@ -1,8 +1,13 @@
-package vn.edu.vnu.uet.nlp.smt;
+package vn.edu.vnu.uet.nlp.smt.ibm;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Set;
+
+import vn.edu.vnu.uet.nlp.smt.structs.SentencePair;
+import vn.edu.vnu.uet.nlp.smt.structs.WordPair;
+import vn.edu.vnu.uet.nlp.smt.utils.IConstants;
+import vn.edu.vnu.uet.nlp.smt.utils.Utils;
 
 public class IBMModel2 extends IBMModel1 {
 
