@@ -3,7 +3,12 @@ package vn.edu.vnu.uet.nlp.smt;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -110,5 +115,27 @@ public class Utils {
 		}
 
 		return first.substring("maxLe = ".length()) + " " + second.substring("maxLf = ".length());
+	}
+
+	public static void saveObject(Object o, String filename) throws IOException {
+		Path filePath = Paths.get(filename);
+		BufferedWriter obj = Files.newBufferedWriter(filePath, StandardCharsets.UTF_8, StandardOpenOption.CREATE);
+		obj.close();
+
+		FileOutputStream fout = new FileOutputStream(filename);
+		ObjectOutputStream oos = new ObjectOutputStream(fout);
+		oos.writeObject(o);
+		oos.close();
+	}
+
+	@SuppressWarnings("unchecked")
+	public static <T> T loadObject(String filename) throws IOException, ClassNotFoundException {
+
+		FileInputStream fin = new FileInputStream(filename);
+		ObjectInputStream ois = new ObjectInputStream(fin);
+		T obj = (T) ois.readObject();
+		ois.close();
+
+		return obj;
 	}
 }

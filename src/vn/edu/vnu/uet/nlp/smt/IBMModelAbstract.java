@@ -1,18 +1,11 @@
 package vn.edu.vnu.uet.nlp.smt;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -52,7 +45,6 @@ public abstract class IBMModelAbstract {
 		initTotal();
 	}
 
-	@SuppressWarnings("unchecked")
 	public IBMModelAbstract(String model) {
 		File fol = new File(model);
 
@@ -67,39 +59,17 @@ public abstract class IBMModelAbstract {
 
 		// Load translation probabilities
 		String tFileName = model + IConstants.transProbsModelName;
-
-		try {
-			FileInputStream fin = new FileInputStream(tFileName);
-			ObjectInputStream ois = new ObjectInputStream(fin);
-			t = (TObjectDoubleHashMap<WordPair>) ois.readObject();
-			ois.close();
-		} catch (IOException | ClassNotFoundException e) {
-			e.printStackTrace();
-		}
-
-		// Load English dictionary
 		String enFileName = model + IConstants.enDictName;
-
-		try {
-			FileInputStream fin = new FileInputStream(enFileName);
-			ObjectInputStream ois = new ObjectInputStream(fin);
-			enDict = (Dictionary) ois.readObject();
-			ois.close();
-		} catch (IOException | ClassNotFoundException e) {
-			e.printStackTrace();
-		}
-
-		// Load foreign dictionary
 		String foFileName = model + IConstants.foDictName;
 
 		try {
-			FileInputStream fin = new FileInputStream(foFileName);
-			ObjectInputStream ois = new ObjectInputStream(fin);
-			foDict = (Dictionary) ois.readObject();
-			ois.close();
+			t = Utils.loadObject(tFileName);
+			enDict = Utils.loadObject(enFileName);
+			foDict = Utils.loadObject(foFileName);
 		} catch (IOException | ClassNotFoundException e) {
 			e.printStackTrace();
 		}
+
 	}
 
 	public abstract void train();
@@ -243,35 +213,14 @@ public abstract class IBMModelAbstract {
 
 		// Save translation probabilities
 		String tFileName = folder + IConstants.transProbsModelName;
-		Path filePath = Paths.get(tFileName);
-		BufferedWriter obj = Files.newBufferedWriter(filePath, StandardCharsets.UTF_8, StandardOpenOption.CREATE);
-		obj.close();
-
-		FileOutputStream fout = new FileOutputStream(tFileName);
-		ObjectOutputStream oos = new ObjectOutputStream(fout);
-		oos.writeObject(t);
-		oos.close();
+		Utils.saveObject(t, tFileName);
 
 		// Save english dictionary
 		String enFileName = folder + IConstants.enDictName;
-		filePath = Paths.get(enFileName);
-		obj = Files.newBufferedWriter(filePath, StandardCharsets.UTF_8, StandardOpenOption.CREATE);
-		obj.close();
-
-		fout = new FileOutputStream(enFileName);
-		oos = new ObjectOutputStream(fout);
-		oos.writeObject(enDict);
-		oos.close();
+		Utils.saveObject(enDict, enFileName);
 
 		// Save foreign dictionary
 		String foFileName = folder + IConstants.foDictName;
-		filePath = Paths.get(foFileName);
-		obj = Files.newBufferedWriter(filePath, StandardCharsets.UTF_8, StandardOpenOption.CREATE);
-		obj.close();
-
-		fout = new FileOutputStream(foFileName);
-		oos = new ObjectOutputStream(fout);
-		oos.writeObject(foDict);
-		oos.close();
+		Utils.saveObject(foDict, foFileName);
 	}
 }
