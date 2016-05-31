@@ -7,10 +7,14 @@ public class IBMModel1 extends IBMModelAbstract {
 		super(enFile, foFile);
 	}
 
+	public IBMModel1(String model) {
+		super(model);
+	}
+
 	@Override
 	public void train() {
 		printDictsInfo();
-		
+
 		System.out.println("Start training IBM Model 1...");
 		// printTransProbs();
 		int iter = 1;

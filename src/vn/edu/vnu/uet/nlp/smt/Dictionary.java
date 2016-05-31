@@ -2,13 +2,19 @@ package vn.edu.vnu.uet.nlp.smt;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Dictionary {
+public class Dictionary implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -2971140367051267737L;
+
 	private Map<String, Integer> dict;
 	private Map<Integer, String> reverseDict;
 
@@ -41,14 +47,19 @@ public class Dictionary {
 	}
 
 	public int getIndex(String word) {
-		if (dict.containsKey(word))
-			return dict.get(word);
+		return dict.get(word);
+	}
 
-		return -1;
+	public boolean containsWord(String word) {
+		return dict.containsKey(word);
 	}
 
 	public String getWord(int index) {
 		return reverseDict.get(index);
+	}
+
+	public boolean containsIndex(int index) {
+		return reverseDict.containsKey(index);
 	}
 
 	public Map<String, Integer> getDict() {

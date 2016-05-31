@@ -1,5 +1,7 @@
 package vn.edu.vnu.uet.nlp.smt;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Set;
 
 public class IBMModel2 extends IBMModel1 {
@@ -12,7 +14,21 @@ public class IBMModel2 extends IBMModel1 {
 
 	public IBMModel2(String enFile, String foFile) {
 		super(enFile, foFile);
+	}
 
+	public IBMModel2(String model) {
+		super(model);
+
+		String aFileName = model + IConstants.alignmentModelName;
+		try {
+			a = Utils.loadArray(aFileName);
+			String maxLeLf = Utils.loadMaxLeLf(aFileName);
+			String[] tokens = maxLeLf.split(" ");
+			maxLe = Integer.parseInt(tokens[0]);
+			maxLf = Integer.parseInt(tokens[1]);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	private void initAlignment() {
@@ -129,17 +145,19 @@ public class IBMModel2 extends IBMModel1 {
 	}
 
 	private void initTotalA() {
-		// totalA = new TObjectDoubleHashMap<OnePositionAndTwoLengths>();
 		totalA = new double[maxLe + 1][maxLe + 1][maxLf + 1];
 	}
 
 	private void initCountA() {
-		// countA = new TObjectDoubleHashMap<TwoPositionsAndTwoLengths>();
 		countA = new double[maxLf + 1][maxLe + 1][maxLe + 1][maxLf + 1];
 	}
 
 	@Override
 	public void printTransProbs() {
+		if (enDict.size() > 10 || foDict.size() > 10) {
+			return;
+		}
+
 		System.out.println("Translation probabilities:");
 		super.printTransProbs();
 
@@ -148,13 +166,33 @@ public class IBMModel2 extends IBMModel1 {
 			for (int le = 1; le <= maxLe; le++) {
 				for (int i = 1; i <= maxLf; i++) {
 					for (int j = 1; j <= maxLe; j++) {
-						if (a[i][j][le][lf] <= 1) {
-							System.out.println("a(" + j + "|" + i + ", " + le + ", " + lf + ") = " + a[i][j][le][lf]);
+						double value = a[i][j][le][lf];
+						if (value <= 1 && value > 0) {
+							System.out.println("a(" + j + "|" + i + ", " + le + ", " + lf + ") = " + value);
 						}
 					}
 				}
 			}
 		}
+	}
+
+	@Override
+	public void save(String folder) throws IOException {
+		super.save(folder);
+
+		File fol = new File(folder);
+		if (!fol.isDirectory()) {
+			System.err.println(folder + " is not a folder! Cannot save model!");
+			return;
+		}
+
+		if (!folder.endsWith("/")) {
+			folder = folder + File.pathSeparator;
+		}
+
+		// Save alignment
+		String aFileName = folder + IConstants.alignmentModelName;
+		Utils.saveArray(a, maxLe, maxLf, aFileName);
 	}
 
 }

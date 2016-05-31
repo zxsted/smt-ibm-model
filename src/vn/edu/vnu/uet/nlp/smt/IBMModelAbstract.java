@@ -1,10 +1,18 @@
 package vn.edu.vnu.uet.nlp.smt;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -22,6 +30,7 @@ public abstract class IBMModelAbstract {
 	Dictionary foDict;
 
 	TObjectDoubleHashMap<WordPair> t;
+
 	TObjectDoubleHashMap<WordPair> count;
 	double[] total;
 
@@ -41,6 +50,56 @@ public abstract class IBMModelAbstract {
 
 		initCount();
 		initTotal();
+	}
+
+	@SuppressWarnings("unchecked")
+	public IBMModelAbstract(String model) {
+		File fol = new File(model);
+
+		if (!fol.isDirectory()) {
+			System.err.println(model + " is not a folder! Cannot load model!");
+			return;
+		}
+
+		if (!model.endsWith("/")) {
+			model = model + File.pathSeparator;
+		}
+
+		// Load translation probabilities
+		String tFileName = model + IConstants.transProbsModelName;
+
+		try {
+			FileInputStream fin = new FileInputStream(tFileName);
+			ObjectInputStream ois = new ObjectInputStream(fin);
+			t = (TObjectDoubleHashMap<WordPair>) ois.readObject();
+			ois.close();
+		} catch (IOException | ClassNotFoundException e) {
+			e.printStackTrace();
+		}
+
+		// Load English dictionary
+		String enFileName = model + IConstants.enDictName;
+
+		try {
+			FileInputStream fin = new FileInputStream(enFileName);
+			ObjectInputStream ois = new ObjectInputStream(fin);
+			enDict = (Dictionary) ois.readObject();
+			ois.close();
+		} catch (IOException | ClassNotFoundException e) {
+			e.printStackTrace();
+		}
+
+		// Load foreign dictionary
+		String foFileName = model + IConstants.foDictName;
+
+		try {
+			FileInputStream fin = new FileInputStream(foFileName);
+			ObjectInputStream ois = new ObjectInputStream(fin);
+			foDict = (Dictionary) ois.readObject();
+			ois.close();
+		} catch (IOException | ClassNotFoundException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public abstract void train();
@@ -147,6 +206,7 @@ public abstract class IBMModelAbstract {
 		if (enDict.size() > 10 || foDict.size() > 10) {
 			return;
 		}
+
 		System.out.print("\t");
 		for (int e = 0; e < enDict.size(); e++) {
 			System.out.print(enDict.getWord(e) + "\t");
@@ -164,5 +224,54 @@ public abstract class IBMModelAbstract {
 	public void printDictsInfo() {
 		System.out.println("English dictionary size: " + enDict.size());
 		System.out.println("Foreign dictionary size: " + foDict.size());
+	}
+
+	public void save(String folder) throws IOException {
+		File fol = new File(folder);
+		if (!fol.exists()) {
+			fol.mkdir();
+		}
+
+		if (!fol.isDirectory()) {
+			System.err.println(folder + " is not a folder! Cannot save model!");
+			return;
+		}
+
+		if (!folder.endsWith("/")) {
+			folder = folder + File.pathSeparator;
+		}
+
+		// Save translation probabilities
+		String tFileName = folder + IConstants.transProbsModelName;
+		Path filePath = Paths.get(tFileName);
+		BufferedWriter obj = Files.newBufferedWriter(filePath, StandardCharsets.UTF_8, StandardOpenOption.CREATE);
+		obj.close();
+
+		FileOutputStream fout = new FileOutputStream(tFileName);
+		ObjectOutputStream oos = new ObjectOutputStream(fout);
+		oos.writeObject(t);
+		oos.close();
+
+		// Save english dictionary
+		String enFileName = folder + IConstants.enDictName;
+		filePath = Paths.get(enFileName);
+		obj = Files.newBufferedWriter(filePath, StandardCharsets.UTF_8, StandardOpenOption.CREATE);
+		obj.close();
+
+		fout = new FileOutputStream(enFileName);
+		oos = new ObjectOutputStream(fout);
+		oos.writeObject(enDict);
+		oos.close();
+
+		// Save foreign dictionary
+		String foFileName = folder + IConstants.foDictName;
+		filePath = Paths.get(foFileName);
+		obj = Files.newBufferedWriter(filePath, StandardCharsets.UTF_8, StandardOpenOption.CREATE);
+		obj.close();
+
+		fout = new FileOutputStream(foFileName);
+		oos = new ObjectOutputStream(fout);
+		oos.writeObject(foDict);
+		oos.close();
 	}
 }

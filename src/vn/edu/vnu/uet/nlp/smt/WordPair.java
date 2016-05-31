@@ -1,6 +1,13 @@
 package vn.edu.vnu.uet.nlp.smt;
 
-public class WordPair {
+import java.io.Serializable;
+
+public class WordPair implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -2546261036800247864L;
+
 	private final int e;
 	private final int f;
 	private int hashCode;
