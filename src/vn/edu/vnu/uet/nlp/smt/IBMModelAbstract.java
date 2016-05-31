@@ -103,6 +103,10 @@ public abstract class IBMModelAbstract {
 				int[] enArray = new int[enLineWords.length];
 				int[] foArray = new int[foLineWords.length];
 
+				if (enArray.length > 100 || foArray.length > 100) {
+					continue;
+				}
+
 				for (int i = 0; i < enArray.length; i++) {
 					enArray[i] = enDict.getIndex(enLineWords[i]);
 				}
@@ -140,6 +144,9 @@ public abstract class IBMModelAbstract {
 	}
 
 	public void printTransProbs() {
+		if (enDict.size() > 10 || foDict.size() > 10) {
+			return;
+		}
 		System.out.print("\t");
 		for (int e = 0; e < enDict.size(); e++) {
 			System.out.print(enDict.getWord(e) + "\t");

@@ -41,7 +41,10 @@ public class Dictionary {
 	}
 
 	public int getIndex(String word) {
-		return dict.get(word);
+		if (dict.containsKey(word))
+			return dict.get(word);
+
+		return -1;
 	}
 
 	public String getWord(int index) {
