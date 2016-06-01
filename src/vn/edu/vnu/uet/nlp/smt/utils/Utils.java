@@ -28,8 +28,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
+/**
+ * @author tuanphong94
+ *
+ */
 public class Utils {
-	public static void saveArray(double[][][][] a, int maxLe, int maxLf, String filename) throws IOException {
+	public static void saveArray(double[][][][] a, int first, int second, int maxLe, int maxLf, String filename,
+			int iStart) throws IOException {
 		File file = new File(filename);
 		if (!file.exists()) {
 			file.createNewFile();
@@ -42,16 +47,42 @@ public class Utils {
 		bw.write("maxLe = " + maxLe + "\n");
 		bw.write("maxLf = " + maxLf + "\n");
 
-		for (int lf = 1; lf <= maxLf; lf++) {
-			for (int le = 1; le <= maxLe; le++) {
-				for (int i = 1; i <= maxLf; i++) {
-					for (int j = 1; j <= maxLe; j++) {
-						bw.write(a[i][j][le][lf] + "");
-						bw.newLine();
+		if (first == maxLf) {
+			bw.write("first = i\n");
+		} else {
+			if (first != maxLe) {
+				System.err.println("Cannot save this array because it is not neither a nor d.");
+				return;
+			}
+			bw.write("first = j\n");
+		}
+
+		bw.write("iStart = " + iStart + "\n");
+
+		if (first == maxLf) {
+			for (int lf = 1; lf <= maxLf; lf++) {
+				for (int le = 1; le <= maxLe; le++) {
+					for (int i = iStart; i <= lf; i++) {
+						for (int j = 1; j <= le; j++) {
+							bw.write(a[i][j][le][lf] + "");
+							bw.newLine();
+						}
 					}
 				}
+				bw.flush();
 			}
-			bw.flush();
+		} else {
+			for (int lf = 1; lf <= maxLf; lf++) {
+				for (int le = 1; le <= maxLe; le++) {
+					for (int i = iStart; i <= lf; i++) {
+						for (int j = 1; j <= le; j++) {
+							bw.write(a[j][i][le][lf] + "");
+							bw.newLine();
+						}
+					}
+				}
+				bw.flush();
+			}
 		}
 
 		bw.close();
@@ -69,33 +100,68 @@ public class Utils {
 
 		String first = br.readLine();
 		if (!first.startsWith("maxLe = ")) {
-			System.err.println("First line of aligment model does match standard form!");
+			System.err.println("First line of model does match standard form!");
 			return null;
 		}
 
 		String second = br.readLine();
 		if (!second.startsWith("maxLf = ")) {
-			System.err.println("Second line of aligment model does match standard form!");
+			System.err.println("Second line of model does match standard form!");
+			return null;
+		}
+
+		String third = br.readLine();
+		if (!third.startsWith("first = ")) {
+			System.err.println("Third line of model does match standard form!");
+			return null;
+		}
+
+		String fourth = br.readLine();
+		if (!fourth.startsWith("iStart = ")) {
+			System.err.println("Third line of aligment model does match standard form!");
 			return null;
 		}
 
 		int maxLe = Integer.parseInt(first.substring("maxLe = ".length()));
 		int maxLf = Integer.parseInt(second.substring("maxLf = ".length()));
+		String firstDirection = third.substring("first = ".length());
+		int iStart = Integer.parseInt(fourth.substring("iStart = ".length()));
 
-		double[][][][] a = new double[maxLf + 1][maxLe + 1][maxLe + 1][maxLf + 1];
+		double[][][][] a;
 
 		String line;
 
-		for (int lf = 1; lf <= maxLf; lf++) {
-			for (int le = 1; le <= maxLe; le++) {
-				for (int i = 1; i <= maxLf; i++) {
-					for (int j = 1; j <= maxLe; j++) {
-						line = br.readLine();
-						if (line != null && !line.isEmpty()) {
-							if (line.equals("NaN")) {
-								a[i][j][le][lf] = 0.0;
-							} else {
-								a[i][j][le][lf] = Double.parseDouble(line);
+		if (firstDirection.equals("i")) {
+			a = new double[maxLf + 1][maxLe + 1][maxLe + 1][maxLf + 1];
+			for (int lf = 1; lf <= maxLf; lf++) {
+				for (int le = 1; le <= maxLe; le++) {
+					for (int i = iStart; i <= lf; i++) {
+						for (int j = 1; j <= le; j++) {
+							line = br.readLine();
+							if (line != null && !line.isEmpty()) {
+								if (line.equals("NaN")) {
+									a[i][j][le][lf] = 0.0;
+								} else {
+									a[i][j][le][lf] = Double.parseDouble(line);
+								}
+							}
+						}
+					}
+				}
+			}
+		} else {
+			a = new double[maxLe + 1][maxLf + 1][maxLe + 1][maxLf + 1];
+			for (int lf = 1; lf <= maxLf; lf++) {
+				for (int le = 1; le <= maxLe; le++) {
+					for (int i = iStart; i <= lf; i++) {
+						for (int j = 1; j <= le; j++) {
+							line = br.readLine();
+							if (line != null && !line.isEmpty()) {
+								if (line.equals("NaN")) {
+									a[j][i][le][lf] = 0.0;
+								} else {
+									a[j][i][le][lf] = Double.parseDouble(line);
+								}
 							}
 						}
 					}
@@ -152,4 +218,5 @@ public class Utils {
 
 		return obj;
 	}
+
 }

@@ -14,6 +14,10 @@
  *******************************************************************************/
 package vn.edu.vnu.uet.nlp.smt.structs;
 
+/**
+ * @author tuanphong94
+ *
+ */
 public class SentencePair {
 	private Sentence sentE;
 	private Sentence sentF;
@@ -28,10 +32,14 @@ public class SentencePair {
 
 	private void initWordPairs() {
 		wordPairs = new WordPair[sentE.length() + 1][sentF.length() + 1];
+		int iStart = 1;
+		if (sentF.isForeign()) {
+			iStart = 0;
+		}
 
 		for (int j = 1; j <= sentE.length(); j++) {
 			int e = sentE.get(j);
-			for (int i = 1; i <= sentF.length(); i++) {
+			for (int i = iStart; i <= sentF.length(); i++) {
 				int f = sentF.get(i);
 				WordPair ef = new WordPair(e, f);
 				wordPairs[j][i] = ef;

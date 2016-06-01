@@ -34,6 +34,10 @@ import vn.edu.vnu.uet.nlp.smt.structs.WordPair;
 import vn.edu.vnu.uet.nlp.smt.utils.IConstants;
 import vn.edu.vnu.uet.nlp.smt.utils.Utils;
 
+/**
+ * @author tuanphong94
+ *
+ */
 public abstract class IBMModelAbstract {
 	NumberFormat formatter = new DecimalFormat("#0.0000");
 
@@ -42,29 +46,46 @@ public abstract class IBMModelAbstract {
 	Dictionary enDict;
 	Dictionary foDict;
 
-	TObjectDoubleHashMap<WordPair> t;
-
-	TObjectDoubleHashMap<WordPair> count;
-	double[] total;
+	TObjectDoubleHashMap<WordPair> t; // translation probability table t(e|f)
+	TObjectDoubleHashMap<WordPair> countT;
+	double[] totalT;
 
 	static final int MAX_ITER_1 = 3;
 	static final int MAX_ITER_2 = 3;
 	static final int MAX_ITER_3 = 3;
-	
-	protected boolean CONVERGE = false;
 
-	public IBMModelAbstract(String enFile, String foFile) {
+	protected boolean CONVERGE = false;
+	boolean usingNull; // use NULL token in foreign sentences or not? Model 3
+						// requires usingNull = true
+
+	static int iStart; // iteration starting point for foreign word (0 if use
+						// NULL token in foreign sentences or 1 otherwise)
+
+	static final double alpha = 1E-10; // use for Laplace smoothing
+
+	public IBMModelAbstract(String enFile, String foFile, final boolean usingNull) {
 		System.out.println("Reading training data...");
 
+		this.usingNull = usingNull;
+		if (usingNull) {
+			iStart = 0;
+		} else {
+			iStart = 1;
+		}
+
 		enDict = new Dictionary(enFile);
-		foDict = new Dictionary(foFile);
+		foDict = new Dictionary(foFile, usingNull);
 
 		initSentPairs(enFile, foFile);
 
 		initTransProbs();
 
-		initCount();
-		initTotal();
+		initCountT();
+		initTotalT();
+	}
+
+	public IBMModelAbstract(String enFile, String foFile) {
+		this(enFile, foFile, false);
 	}
 
 	public IBMModelAbstract(String model) {
@@ -92,34 +113,40 @@ public abstract class IBMModelAbstract {
 			e.printStackTrace();
 		}
 
+		usingNull = foDict.isForeign();
+		if (usingNull) {
+			iStart = 0;
+		} else {
+			iStart = 1;
+		}
 	}
 
 	public abstract void train();
 
-	protected void initCount() {
-		if (count == null) {
-			count = new TObjectDoubleHashMap<WordPair>();
+	protected void initCountT() {
+		if (countT == null) {
+			countT = new TObjectDoubleHashMap<WordPair>();
 
 			for (SentencePair p : sentPairs) {
 				for (int j = 1; j <= p.getE().length(); j++) {
-					for (int i = 1; i <= p.getF().length(); i++) {
+					for (int i = iStart; i <= p.getF().length(); i++) {
 						WordPair ef = p.getWordPair(j, i);
-						count.put(ef, 0.0);
+						countT.put(ef, 0.0);
 					}
 				}
 			}
 
 		} else {
-			Set<WordPair> keySet = count.keySet();
+			Set<WordPair> keySet = countT.keySet();
 
 			for (WordPair ef : keySet) {
-				count.put(ef, 0.0);
+				countT.put(ef, 0.0);
 			}
 		}
 	}
 
-	protected void initTotal() {
-		total = new double[foDict.size()];
+	protected void initTotalT() {
+		totalT = new double[foDict.size()];
 	}
 
 	private void initTransProbs() {
@@ -130,7 +157,7 @@ public abstract class IBMModelAbstract {
 
 		for (SentencePair p : sentPairs) {
 			for (int j = 1; j <= p.getE().length(); j++) {
-				for (int i = 1; i <= p.getF().length(); i++) {
+				for (int i = iStart; i <= p.getF().length(); i++) {
 					WordPair ef = p.getWordPair(j, i);
 					t.put(ef, value);
 				}
@@ -151,12 +178,12 @@ public abstract class IBMModelAbstract {
 				String[] enLineWords = enLine.split("\\s+");
 				String[] foLineWords = foLine.split("\\s+");
 
-				int[] enArray = new int[enLineWords.length];
-				int[] foArray = new int[foLineWords.length];
-
-				if (enArray.length > 100 || foArray.length > 100) {
+				if (enLineWords.length > 100 || foLineWords.length > 100) {
 					continue;
 				}
+
+				int[] enArray = new int[enLineWords.length];
+				int[] foArray = new int[foLineWords.length];
 
 				for (int i = 0; i < enArray.length; i++) {
 					enArray[i] = enDict.getIndex(enLineWords[i]);
@@ -166,7 +193,7 @@ public abstract class IBMModelAbstract {
 					foArray[i] = foDict.getIndex(foLineWords[i]);
 				}
 
-				sentPairs.add(new SentencePair(new Sentence(enArray), new Sentence(foArray)));
+				sentPairs.add(new SentencePair(new Sentence(enArray), new Sentence(foArray, usingNull)));
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -199,6 +226,7 @@ public abstract class IBMModelAbstract {
 			return;
 		}
 
+		System.out.println("Translation probabilities:");
 		System.out.print("\t");
 		for (int e = 0; e < enDict.size(); e++) {
 			System.out.print(enDict.getWord(e) + "\t");
@@ -245,4 +273,5 @@ public abstract class IBMModelAbstract {
 		String foFileName = folder + IConstants.foDictName;
 		Utils.saveObject(foDict, foFileName);
 	}
+
 }

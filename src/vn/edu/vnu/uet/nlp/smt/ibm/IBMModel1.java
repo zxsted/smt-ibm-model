@@ -19,6 +19,10 @@ import java.util.Set;
 import vn.edu.vnu.uet.nlp.smt.structs.SentencePair;
 import vn.edu.vnu.uet.nlp.smt.structs.WordPair;
 
+/**
+ * @author tuanphong94
+ *
+ */
 public class IBMModel1 extends IBMModelAbstract {
 	public IBMModel1(String enFile, String foFile) {
 		super(enFile, foFile);
@@ -26,6 +30,10 @@ public class IBMModel1 extends IBMModelAbstract {
 
 	public IBMModel1(String model) {
 		super(model);
+	}
+
+	public IBMModel1(String enFile, String foFile, boolean usingNull) {
+		super(enFile, foFile, usingNull);
 	}
 
 	@Override
@@ -41,44 +49,46 @@ public class IBMModel1 extends IBMModelAbstract {
 			long start = System.currentTimeMillis();
 
 			if (iter > 1) {
-				initCount();
-				initTotal();
+				initCountT();
+				initTotalT();
 			}
 
 			for (SentencePair p : sentPairs) {
+				int le = p.getE().length();
+				int lf = p.getF().length();
 				double subTotal;
 
-				for (int j = 1; j <= p.getE().length(); j++) {
+				for (int j = 1; j <= le; j++) {
 					subTotal = 0;
 
 					// compute normalization
-					for (int i = 1; i <= p.getF().length(); i++) {
+					for (int i = iStart; i <= lf; i++) {
 						WordPair ef = p.getWordPair(j, i);
 						subTotal += t.get(ef);
 					}
 
 					// collect counts
-					for (int i = 1; i <= p.getF().length(); i++) {
+					for (int i = iStart; i <= lf; i++) {
 						int f = p.getF().get(i);
 						WordPair ef = p.getWordPair(j, i);
-						double c = t.get(ef) / subTotal;
+						double c = (t.get(ef) + alpha) / (subTotal + alpha * (lf - iStart + 1));
 
-						if (count.containsKey(ef)) {
-							count.put(ef, count.get(ef) + c);
+						if (countT.containsKey(ef)) {
+							countT.put(ef, countT.get(ef) + c);
 						} else {
-							count.put(ef, c);
+							countT.put(ef, c);
 						}
 
-						total[f] += c;
+						totalT[f] += c;
 					}
 				}
 			}
 
 			// estimate probabilities
-			Set<WordPair> keySet = count.keySet();
+			Set<WordPair> keySet = countT.keySet();
 
 			for (WordPair ef : keySet) {
-				double value = count.get(ef) / total[ef.getF()];
+				double value = countT.get(ef) / totalT[ef.getF()];
 				t.put(ef, value);
 			}
 

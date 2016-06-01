@@ -16,6 +16,10 @@ package vn.edu.vnu.uet.nlp.smt.structs;
 
 import java.io.Serializable;
 
+/**
+ * @author tuanphong94
+ *
+ */
 public class WordPair implements Serializable {
 	/**
 	 * 

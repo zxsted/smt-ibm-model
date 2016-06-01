@@ -14,9 +14,19 @@
  *******************************************************************************/
 package vn.edu.vnu.uet.nlp.smt.utils;
 
+/**
+ * @author tuanphong94
+ *
+ */
 public interface IConstants {
 	static final String transProbsModelName = "trans_prob.smt";
 	static final String alignmentModelName = "alignment.smt";
 	static final String enDictName = "enDict.smt";
 	static final String foDictName = "foDict.smt";
+	static final String distortionModelName = "distortion.smt";
+	static final String fertilityModelName = "fertility.smt";
+	static final String nullInsertionModelName = "null.smt";
+
+	static final String NULLTOKEN = "NUll";
+	static final int NULLINDEX = 0;
 }

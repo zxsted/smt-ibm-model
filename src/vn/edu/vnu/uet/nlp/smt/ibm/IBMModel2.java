@@ -23,6 +23,10 @@ import vn.edu.vnu.uet.nlp.smt.structs.WordPair;
 import vn.edu.vnu.uet.nlp.smt.utils.IConstants;
 import vn.edu.vnu.uet.nlp.smt.utils.Utils;
 
+/**
+ * @author tuanphong94
+ *
+ */
 public class IBMModel2 extends IBMModel1 {
 
 	double[][][][] a;
@@ -38,6 +42,10 @@ public class IBMModel2 extends IBMModel1 {
 	public IBMModel2(String model) {
 		super(model);
 
+		if (!model.endsWith("/")) {
+			model = model + File.pathSeparator;
+		}
+
 		String aFileName = model + IConstants.alignmentModelName;
 		try {
 			a = Utils.loadArray(aFileName);
@@ -48,6 +56,10 @@ public class IBMModel2 extends IBMModel1 {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	public IBMModel2(String enFile, String foFile, boolean usingNull) {
+		super(enFile, foFile, usingNull);
 	}
 
 	private void initAlignment() {
@@ -66,8 +78,8 @@ public class IBMModel2 extends IBMModel1 {
 		for (int lf = 1; lf <= maxLf; lf++) {
 			double value = 1 / (double) (lf + 1);
 			for (int le = 1; le <= maxLe; le++) {
-				for (int i = 1; i <= maxLf; i++) {
-					for (int j = 1; j <= maxLe; j++) {
+				for (int i = iStart; i <= lf; i++) {
+					for (int j = 1; j <= le; j++) {
 						a[i][j][le][lf] = value;
 					}
 				}
@@ -88,8 +100,8 @@ public class IBMModel2 extends IBMModel1 {
 			long start = System.currentTimeMillis();
 
 			// initialize
-			initCount();
-			initTotal();
+			initCountT();
+			initTotalT();
 
 			initCountA();
 			initTotalA();
@@ -104,25 +116,25 @@ public class IBMModel2 extends IBMModel1 {
 				for (int j = 1; j <= le; j++) {
 					subTotal = 0;
 
-					for (int i = 1; i <= lf; i++) {
+					for (int i = iStart; i <= lf; i++) {
 						WordPair ef = p.getWordPair(j, i);
 						subTotal += t.get(ef) * a[i][j][le][lf];
 					}
 
 					// collect counts
-					for (int i = 1; i <= lf; i++) {
+					for (int i = iStart; i <= lf; i++) {
 						int f = p.getF().get(i);
 						WordPair ef = p.getWordPair(j, i);
 
-						double c = t.get(ef) * a[i][j][le][lf] / subTotal;
+						double c = (t.get(ef) * a[i][j][le][lf] + alpha) / (subTotal + alpha * (lf - iStart + 1));
 
-						if (count.containsKey(ef)) {
-							count.put(ef, count.get(ef) + c);
+						if (countT.containsKey(ef)) {
+							countT.put(ef, countT.get(ef) + c);
 						} else {
-							count.put(ef, c);
+							countT.put(ef, c);
 						}
 
-						total[f] += c;
+						totalT[f] += c;
 
 						countA[i][j][le][lf] += c;
 						totalA[j][le][lf] += c;
@@ -131,17 +143,17 @@ public class IBMModel2 extends IBMModel1 {
 			}
 
 			// estimate probabilities
-			Set<WordPair> keySet = count.keySet();
+			Set<WordPair> keySet = countT.keySet();
 
 			for (WordPair ef : keySet) {
-				double value = count.get(ef) / total[ef.getF()];
+				double value = countT.get(ef) / totalT[ef.getF()];
 				t.put(ef, value);
 			}
 
 			for (int lf = 1; lf <= maxLf; lf++) {
 				for (int le = 1; le <= maxLe; le++) {
-					for (int i = 1; i <= maxLf; i++) {
-						for (int j = 1; j <= maxLe; j++) {
+					for (int i = iStart; i <= lf; i++) {
+						for (int j = 1; j <= le; j++) {
 							a[i][j][le][lf] = countA[i][j][le][lf] / totalA[j][le][lf];
 						}
 					}
@@ -179,18 +191,16 @@ public class IBMModel2 extends IBMModel1 {
 			return;
 		}
 
-		System.out.println("Translation probabilities:");
 		super.printTransProbs();
 
 		System.out.println("Alignment probabilities:");
 		for (int lf = 1; lf <= maxLf; lf++) {
 			for (int le = 1; le <= maxLe; le++) {
-				for (int i = 1; i <= maxLf; i++) {
-					for (int j = 1; j <= maxLe; j++) {
+				for (int i = iStart; i <= lf; i++) {
+					for (int j = 1; j <= le; j++) {
 						double value = a[i][j][le][lf];
-						if (value <= 1 && value > 0) {
-							System.out.println("a(" + j + "|" + i + ", " + le + ", " + lf + ") = " + value);
-						}
+						if (value <= 1 && value > 0)
+							System.out.println("a(" + i + "|" + j + ", " + le + ", " + lf + ") = " + value);
 					}
 				}
 			}
@@ -213,7 +223,7 @@ public class IBMModel2 extends IBMModel1 {
 
 		// Save alignment
 		String aFileName = folder + IConstants.alignmentModelName;
-		Utils.saveArray(a, maxLe, maxLf, aFileName);
+		Utils.saveArray(a, maxLf, maxLe, maxLe, maxLf, aFileName, iStart);
 	}
 
 }

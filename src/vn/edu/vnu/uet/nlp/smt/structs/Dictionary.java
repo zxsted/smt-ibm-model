@@ -23,6 +23,12 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
+import vn.edu.vnu.uet.nlp.smt.utils.IConstants;
+
+/**
+ * @author tuanphong94
+ *
+ */
 public class Dictionary implements Serializable {
 	/**
 	 * 
@@ -32,15 +38,23 @@ public class Dictionary implements Serializable {
 	private Map<String, Integer> dict;
 	private Map<Integer, String> reverseDict;
 
-	public Dictionary(String filename) {
+	private boolean isForeign;
+
+	public Dictionary(String filename, boolean isForeign) {
+		this.isForeign = isForeign;
 		dict = new HashMap<String, Integer>();
 		reverseDict = new HashMap<Integer, String>();
+
+		if (isForeign) {
+			dict.put(IConstants.NULLTOKEN, IConstants.NULLINDEX);
+			reverseDict.put(IConstants.NULLINDEX, IConstants.NULLTOKEN);
+		}
 
 		BufferedReader br = null;
 
 		try {
 			br = Files.newBufferedReader(Paths.get(filename), StandardCharsets.UTF_8);
-			int count = 0;
+			int count = dict.size();
 			for (String line; (line = br.readLine()) != null;) {
 				if (line.isEmpty()) {
 					continue;
@@ -58,6 +72,10 @@ public class Dictionary implements Serializable {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	public Dictionary(String enFile) {
+		this(enFile, false);
 	}
 
 	public int getIndex(String word) {
@@ -82,6 +100,10 @@ public class Dictionary implements Serializable {
 
 	public int size() {
 		return dict.size();
+	}
+
+	public boolean isForeign() {
+		return isForeign;
 	}
 
 	@Override

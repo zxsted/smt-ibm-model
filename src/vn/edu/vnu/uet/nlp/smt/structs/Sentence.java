@@ -17,22 +17,49 @@ package vn.edu.vnu.uet.nlp.smt.structs;
 import java.util.ArrayList;
 import java.util.List;
 
+import vn.edu.vnu.uet.nlp.smt.utils.IConstants;
+
+/**
+ * @author tuanphong94
+ *
+ */
 public class Sentence {
 	private List<Integer> content;
+	private boolean isForeign;
 
 	public Sentence(int[] array) {
+		this(array, false);
+	}
+
+	public Sentence(int[] array, boolean isForeign) {
 		content = new ArrayList<Integer>(array.length);
+
+		this.isForeign = isForeign;
+
+		if (isForeign) {
+			content.add(IConstants.NULLINDEX);
+		}
 
 		for (int i = 0; i < array.length; i++) {
 			content.add(array[i]);
 		}
 	}
 
+	public boolean isForeign() {
+		return isForeign;
+	}
+
 	public int get(int index) {
+		if (isForeign) {
+			return content.get(index);
+		}
 		return content.get(index - 1);
 	}
 
 	public int length() {
+		if (isForeign) {
+			return content.size() - 1;
+		}
 		return content.size();
 	}
 }
