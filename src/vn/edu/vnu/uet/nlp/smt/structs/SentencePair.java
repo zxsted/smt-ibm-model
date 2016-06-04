@@ -14,6 +14,8 @@
  *******************************************************************************/
 package vn.edu.vnu.uet.nlp.smt.structs;
 
+import vn.edu.vnu.uet.nlp.smt.utils.Utils;
+
 /**
  * @author tuanphong94
  *
@@ -21,7 +23,7 @@ package vn.edu.vnu.uet.nlp.smt.structs;
 public class SentencePair {
 	private Sentence sentE;
 	private Sentence sentF;
-	WordPair[][] wordPairs;
+	int[][] wordPairs;
 
 	public SentencePair(Sentence e, Sentence f) {
 		this.sentE = e;
@@ -31,7 +33,7 @@ public class SentencePair {
 	}
 
 	private void initWordPairs() {
-		wordPairs = new WordPair[sentE.length() + 1][sentF.length() + 1];
+		wordPairs = new int[sentE.length() + 1][sentF.length() + 1];
 		int iStart = 1;
 		if (sentF.isForeign()) {
 			iStart = 0;
@@ -41,8 +43,8 @@ public class SentencePair {
 			int e = sentE.get(j);
 			for (int i = iStart; i <= sentF.length(); i++) {
 				int f = sentF.get(i);
-				WordPair ef = new WordPair(e, f);
-				wordPairs[j][i] = ef;
+				int hashCode = Utils.generateTwoIntegersHashCode(e, f);
+				wordPairs[j][i] = hashCode;
 			}
 		}
 	}
@@ -56,6 +58,7 @@ public class SentencePair {
 	}
 
 	public WordPair getWordPair(int j, int i) {
-		return wordPairs[j][i];
+		return new WordPair(sentE.get(j), sentF.get(i), wordPairs[j][i]);
 	}
+
 }

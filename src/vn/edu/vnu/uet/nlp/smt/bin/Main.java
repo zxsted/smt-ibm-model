@@ -25,19 +25,21 @@ import vn.edu.vnu.uet.nlp.smt.ibm.IBMModel3;
 public class Main {
 
 	public static void main(String[] args) throws IOException {
-		String enFile = "/home/tuanphong94/workspace/smt-data/toy/toy.en";
-		String foFile = "/home/tuanphong94/workspace/smt-data/toy/toy.de";
-		// String enFile = "/home/tuanphong94/workspace/smt-data/50.en";
-		// String foFile = "/home/tuanphong94/workspace/smt-data/50.vn";
-		// String enFile = "/home/tuanphong94/workspace/smt-data/1k.en";
-		// String foFile = "/home/tuanphong94/workspace/smt-data/1k.vn";
-		// String enFile = "/home/tuanphong94/workspace/smt-data/100k.en";
-		// String foFile = "/home/tuanphong94/workspace/smt-data/100k.vn";
-		// String enFile = "/home/tuanphong94/workspace/smt-data/290k.en";
-		// String foFile = "/home/tuanphong94/workspace/smt-data/290k.vn";
+//		String enFile = "/home/tuanphong94/workspace/smt-data/toy/toy.en";
+//		String foFile = "/home/tuanphong94/workspace/smt-data/toy/toy.de";
+//		 String enFile = "/home/tuanphong94/workspace/smt-data/50.en";
+//		 String foFile = "/home/tuanphong94/workspace/smt-data/50.vn";
+//		 String enFile = "/home/tuanphong94/workspace/smt-data/200.en";
+//		 String foFile = "/home/tuanphong94/workspace/smt-data/200.vn";
+//		 String enFile = "/home/tuanphong94/workspace/smt-data/1k.en";
+//		 String foFile = "/home/tuanphong94/workspace/smt-data/1k.vn";
+//		 String enFile = "/home/tuanphong94/workspace/smt-data/100k.en";
+//		 String foFile = "/home/tuanphong94/workspace/smt-data/100k.vn";
+		 String enFile = "/home/tuanphong94/workspace/smt-data/290k.en";
+		 String foFile = "/home/tuanphong94/workspace/smt-data/290k.vn";
 		IBMModel3 model = new IBMModel3(enFile, foFile);
 		model.train();
-		model.printTransProbs();
+//		model.printTransProbs();
 		// model.save("/home/tuanphong94/workspace/smt-data/model/");
 
 		// System.out.println("Load saved model...");

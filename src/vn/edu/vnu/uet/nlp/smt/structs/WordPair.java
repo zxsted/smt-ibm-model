@@ -16,6 +16,8 @@ package vn.edu.vnu.uet.nlp.smt.structs;
 
 import java.io.Serializable;
 
+import vn.edu.vnu.uet.nlp.smt.utils.Utils;
+
 /**
  * @author tuanphong94
  *
@@ -41,17 +43,25 @@ public class WordPair implements Serializable {
 	public WordPair(final int e, final int f) {
 		this.e = e;
 		this.f = f;
-		generateHashCode();
+		Utils.generateTwoIntegersHashCode(e, f);
+	}
+
+	public WordPair(final int e, final int f, final int hashCode) {
+		this.e = e;
+		this.f = f;
+		this.hashCode = hashCode;
 	}
 
 	@Override
-	public boolean equals(final Object o) {
-		final WordPair key = (WordPair) o;
-		return hashCode == key.hashCode;
-	}
-
-	public void generateHashCode() {
-		hashCode = (e + "|" + f).hashCode();
+	public boolean equals(final Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		final WordPair other = (WordPair) obj;
+		return hashCode == other.hashCode;
 	}
 
 	@Override

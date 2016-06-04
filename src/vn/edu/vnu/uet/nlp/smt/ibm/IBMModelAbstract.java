@@ -64,7 +64,9 @@ public abstract class IBMModelAbstract {
 	static final double alpha = 1E-10; // use for Laplace smoothing
 
 	public IBMModelAbstract(String enFile, String foFile, final boolean usingNull) {
-		System.out.println("Reading training data...");
+		System.out.print("Reading training data...");
+
+		long start = System.currentTimeMillis();
 
 		this.usingNull = usingNull;
 		if (usingNull) {
@@ -78,10 +80,11 @@ public abstract class IBMModelAbstract {
 
 		initSentPairs(enFile, foFile);
 
-		initTransProbs();
+		long end = System.currentTimeMillis();
 
-		initCountT();
-		initTotalT();
+		long time = end - start;
+
+		System.out.println(" [" + time + " ms]");
 	}
 
 	public IBMModelAbstract(String enFile, String foFile) {
@@ -126,16 +129,6 @@ public abstract class IBMModelAbstract {
 	protected void initCountT() {
 		if (countT == null) {
 			countT = new TObjectDoubleHashMap<WordPair>();
-
-			for (SentencePair p : sentPairs) {
-				for (int j = 1; j <= p.getE().length(); j++) {
-					for (int i = iStart; i <= p.getF().length(); i++) {
-						WordPair ef = p.getWordPair(j, i);
-						countT.put(ef, 0.0);
-					}
-				}
-			}
-
 		} else {
 			Set<WordPair> keySet = countT.keySet();
 
@@ -149,7 +142,7 @@ public abstract class IBMModelAbstract {
 		totalT = new double[foDict.size()];
 	}
 
-	private void initTransProbs() {
+	protected void initTransProbs() {
 		t = new TObjectDoubleHashMap<WordPair>();
 
 		// uniform distribution
@@ -174,6 +167,7 @@ public abstract class IBMModelAbstract {
 
 			String enLine, foLine;
 
+			// int count = 0;
 			while ((enLine = enBr.readLine()) != null && (foLine = foBr.readLine()) != null) {
 				String[] enLineWords = enLine.split("\\s+");
 				String[] foLineWords = foLine.split("\\s+");
@@ -194,6 +188,10 @@ public abstract class IBMModelAbstract {
 				}
 
 				sentPairs.add(new SentencePair(new Sentence(enArray), new Sentence(foArray, usingNull)));
+
+				// if (++count % 1000 == 0) {
+				// System.out.println(count + " sentences");
+				// }
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -241,7 +239,8 @@ public abstract class IBMModelAbstract {
 		}
 	}
 
-	public void printDictsInfo() {
+	public void printDataInfo() {
+		System.out.println("Number of sentence pairs: " + sentPairs.size());
 		System.out.println("English dictionary size: " + enDict.size());
 		System.out.println("Foreign dictionary size: " + foDict.size());
 	}

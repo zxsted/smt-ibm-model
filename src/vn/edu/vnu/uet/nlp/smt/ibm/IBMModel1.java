@@ -38,7 +38,16 @@ public class IBMModel1 extends IBMModelAbstract {
 
 	@Override
 	public void train() {
-		printDictsInfo();
+		printDataInfo();
+
+		System.out.print("Initializing IBM Model 1...");
+		long ss = System.currentTimeMillis();
+		initTransProbs();
+		initCountT();
+		initTotalT();
+		long ee = System.currentTimeMillis();
+		long initTime = ee - ss;
+		System.out.println(" [" + initTime + " ms]");
 
 		System.out.println("Start training IBM Model 1...");
 		// printTransProbs();
@@ -64,14 +73,14 @@ public class IBMModel1 extends IBMModelAbstract {
 					// compute normalization
 					for (int i = iStart; i <= lf; i++) {
 						WordPair ef = p.getWordPair(j, i);
-						subTotal += t.get(ef);
+						subTotal += t.get(ef) + alpha;
 					}
 
 					// collect counts
 					for (int i = iStart; i <= lf; i++) {
 						int f = p.getF().get(i);
 						WordPair ef = p.getWordPair(j, i);
-						double c = (t.get(ef) + alpha) / (subTotal + alpha * (lf - iStart + 1));
+						double c = (t.get(ef) + alpha) / subTotal;
 
 						if (countT.containsKey(ef)) {
 							countT.put(ef, countT.get(ef) + c);

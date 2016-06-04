@@ -2,6 +2,8 @@ package vn.edu.vnu.uet.nlp.smt.structs;
 
 import java.io.Serializable;
 
+import vn.edu.vnu.uet.nlp.smt.utils.Utils;
+
 public class FertWord implements Serializable {
 	/**
 	 * 
@@ -22,17 +24,26 @@ public class FertWord implements Serializable {
 	public FertWord(final int fert, final int f) {
 		this.fert = fert;
 		this.f = f;
-		generateHashCode();
+		Utils.generateTwoIntegersHashCode(fert, f);
+	}
+
+	public FertWord(final int fert, final int f, final int hashCode) {
+		this.fert = fert;
+		this.f = f;
+
+		this.hashCode = hashCode;
 	}
 
 	@Override
-	public boolean equals(final Object o) {
-		final FertWord key = (FertWord) o;
-		return hashCode == key.hashCode;
-	}
-
-	public void generateHashCode() {
-		hashCode = (fert + "|" + f).hashCode();
+	public boolean equals(final Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		final FertWord other = (FertWord) obj;
+		return hashCode == other.hashCode;
 	}
 
 	@Override

@@ -219,4 +219,8 @@ public class Utils {
 		return obj;
 	}
 
+	public static int generateTwoIntegersHashCode(int i1, int i2) {
+		return (i1 + "|" + i2).hashCode();
+	}
+
 }

@@ -21,11 +21,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.commons.math3.exception.MathArithmeticException;
 import org.apache.commons.math3.util.CombinatoricsUtils;
 
 import gnu.trove.map.hash.TObjectDoubleHashMap;
@@ -42,7 +41,7 @@ import vn.edu.vnu.uet.nlp.smt.utils.Utils;
  */
 public class IBMModel3 extends IBMModel2 {
 
-	double[][][][] d;
+	double[][][][] d; // distoron
 	double[][][][] countD;
 	double[][][] totalD;
 
@@ -50,11 +49,11 @@ public class IBMModel3 extends IBMModel2 {
 	double countP0;
 	double countP1;
 
-	TObjectDoubleHashMap<FertWord> n;
+	TObjectDoubleHashMap<FertWord> n; // fertility
 	TObjectDoubleHashMap<FertWord> countN;
 	double[] totalN;
 
-	static final int DEFAULT_MAX_FERT = 40;
+	int[][] fertWordHashCode;
 
 	public IBMModel3(String enFile, String foFile) {
 		super(enFile, foFile, true);
@@ -91,17 +90,39 @@ public class IBMModel3 extends IBMModel2 {
 	public void train() {
 		super.train();
 
-		// Initial probability of null insertion
+		System.out.print("Initializing IBM Model 3...");
+		long ss = System.currentTimeMillis();
 		p0 = 0.5;
 
+		System.out.print(" destroy alignment probability...");
+		countA = null;
+		totalA = null;
+
+		System.out.print(" distortion...");
 		initDistortion();
+		initCountD();
+		initTotalD();
+
+		System.out.print(" fetility...");
 		initFertility();
+		System.out.print(" count...");
+		initCountN();
+		System.out.print(" total...");
+		initTotalN();
+
+		long ee = System.currentTimeMillis();
+		long initTime = ee - ss;
+		System.out.println(" [" + initTime + " ms]");
 
 		System.out.println("Start training IBM Model 3...");
 		int iter = 1;
 		while (!CONVERGE) {
-			System.out.print("Iteration " + iter);
-
+			// System.out.print("Iteration " + iter);
+			System.out.println("Iteration " + iter);
+			long timeSample = 0;
+			long timeCount = 0;
+			long timeUpdate = 0;
+			int totalSample = 0;
 			long start = System.currentTimeMillis();
 
 			// initialize
@@ -110,36 +131,38 @@ public class IBMModel3 extends IBMModel2 {
 			initCountT();
 			initTotalT();
 
-			initCountD();
-			initTotalD();
-
-			initCountN();
-			initTotalN();
+			if (iter > 1) {
+				initCountD();
+				initTotalD();
+				initCountN();
+				initTotalN();
+			}
 
 			countP0 = 0;
 			countP1 = 0;
+			int countIterP = 0;
 
 			for (SentencePair p : sentPairs) {
 				int le = p.getE().length();
 				int lf = p.getF().length();
 
+				long startSample = System.currentTimeMillis();
 				// Sample the alignment space
-				List<Alignment> listA = sample(p);
+				Set<Alignment> listA = sample(p);
+				long endSample = System.currentTimeMillis();
+				timeSample += endSample - startSample;
+				totalSample += listA.size();
 
 				// Collect counts
 				double subTotal = 0;
-				double[] tempProbs = new double[listA.size()];
-				int numSpamle = listA.size();
 
-				for (int it = 0; it < numSpamle; it++) {
-					Alignment align = listA.get(it);
-					tempProbs[it] = probability(align.getA(), p, align.getPhi());
-					subTotal += tempProbs[it];
+				for (Alignment align : listA) {
+					// System.out.println(align);
+					subTotal += align.getProbability() + alpha;
 				}
 
-				for (int it = 0; it < numSpamle; it++) {
-					Alignment align = listA.get(it);
-					double c = (tempProbs[it] + alpha) / (subTotal + alpha * numSpamle);
+				for (Alignment align : listA) {
+					double c = (align.getProbability() + alpha) / subTotal;
 					int cNull = 0;
 
 					for (int j = 1; j <= le; j++) {
@@ -179,7 +202,7 @@ public class IBMModel3 extends IBMModel2 {
 						}
 
 						int f = p.getF().get(i);
-						FertWord fw = new FertWord(fertility, f);
+						FertWord fw = getFertWord(fertility, f);
 						if (countN.containsKey(fw)) {
 							countN.put(fw, countN.get(fw) + c);
 						} else {
@@ -193,8 +216,18 @@ public class IBMModel3 extends IBMModel2 {
 						}
 					}
 				}
+
+				if ((++countIterP) % 10000 == 0) {
+					System.out.println("Pair " + countIterP + ": le = " + le + ", lf = " + lf + ", samples = "
+							+ listA.size() + ", total samples = " + totalSample + ", total time: "
+							+ (System.currentTimeMillis() - start) + " ms");
+				}
+
+				long endCount = System.currentTimeMillis();
+				timeCount += endCount - endSample;
 			}
 
+			long startUpdate = System.currentTimeMillis();
 			// Estimate translation probability distribution
 			Set<WordPair> keySet = countT.keySet();
 
@@ -227,9 +260,15 @@ public class IBMModel3 extends IBMModel2 {
 
 			long end = System.currentTimeMillis();
 
-			long time = end - start;
+			long totalTime = end - start;
+			timeUpdate = end - startUpdate;
 
-			System.out.println(" [" + time + " ms]");
+			System.out.println("Number of samples: " + totalSample);
+			System.out.println("Sample time: " + timeSample + " ms");
+			System.out.println("Count time: " + timeCount + " ms");
+			System.out.println("Update time: " + timeUpdate + " ms");
+			System.out.println("Total time: " + totalTime + " ms");
+			// System.out.println(" [" + totalTime + " ms]");
 
 			iter++;
 			if (iter > MAX_ITER_3) {
@@ -245,19 +284,40 @@ public class IBMModel3 extends IBMModel2 {
 	}
 
 	private void initCountN() {
-		countN = new TObjectDoubleHashMap<FertWord>();
+		if (countN == null) {
+			countN = new TObjectDoubleHashMap<FertWord>();
+		} else {
+			Set<FertWord> keySet = countN.keySet();
+
+			for (FertWord fw : keySet) {
+				countN.put(fw, 0.0);
+			}
+		}
+
 	}
 
 	private void initFertility() {
 		n = new TObjectDoubleHashMap<FertWord>();
+		fertWordHashCode = new int[maxLe + 1][foDict.size()];
+
 		double value = 1 / (double) (maxLe + 1);
 
-		for (int fert = 0; fert <= maxLe; fert++) {
-			for (int f = 0; f < foDict.size(); f++) {
-				FertWord fw = new FertWord(fert, f);
-				n.put(fw, value);
+		for (SentencePair p : sentPairs) {
+			int le = p.getE().length();
+			for (int fert = 0; fert <= le; fert++) {
+				for (int i = 0; i <= p.getF().length(); i++) {
+					int f = p.getF().get(i);
+					int hashCode = Utils.generateTwoIntegersHashCode(fert, f);
+					fertWordHashCode[fert][f] = hashCode;
+					FertWord fw = getFertWord(fert, f);
+					n.put(fw, value);
+				}
 			}
 		}
+	}
+
+	private FertWord getFertWord(int fert, int f) {
+		return new FertWord(fert, f, fertWordHashCode[fert][f]);
 	}
 
 	private void initDistortion() {
@@ -290,12 +350,11 @@ public class IBMModel3 extends IBMModel2 {
 	 * alignment on local and returns all its neighborings, which are swapped or
 	 * moved one distance from the best alignment.
 	 */
-	private List<Alignment> sample(SentencePair p) {
-		List<Alignment> listA = new ArrayList<Alignment>();
+	private Set<Alignment> sample(SentencePair p) {
+		Set<Alignment> listA = new HashSet<Alignment>();
 		int le = p.getE().length();
 		int lf = p.getF().length();
 
-		// Compute normalization
 		for (int i = 0; i <= lf; i++) {
 			for (int j = 1; j <= le; j++) {
 				int[] align = new int[le + 1];
@@ -324,8 +383,12 @@ public class IBMModel3 extends IBMModel2 {
 					align[jj] = bestI;
 					phi[bestI]++;
 				}
-				align = hillClimb(align, j, p, phi);
-				listA.addAll(neighboring(align, j, p, phi));
+				Alignment al = new Alignment(align, phi);
+				al.setProbability(probability(al, p));
+
+				if (al.getProbability() > 0) {
+					listA.addAll(hillClimbingAndNeighboring(al, j, p));
+				}
 			}
 		}
 
@@ -342,50 +405,51 @@ public class IBMModel3 extends IBMModel2 {
 	}
 
 	/**
-	 * This function returns the best alignment on local. It gets some
-	 * neighboring alignments and finds out the alignment with highest
-	 * probability in those alignment spaces. If the current alignment recorded
-	 * has the highest probability, then stop the search loop. If not, then
-	 * continue the search loop until it finds out the highest probability of
-	 * alignment in local.
+	 * This function computes the best alignment on local and returns its
+	 * neighboring alignments. It gets some neighboring alignments and finds out
+	 * the alignment with highest probability in those alignment spaces. If the
+	 * current alignment recorded has the highest probability, then stop the
+	 * search loop. If not, then continue the search loop until it finds out the
+	 * highest probability of alignment in local.
 	 */
-	private int[] hillClimb(int[] a, int jPegged, SentencePair p, int[] phi) {
-		int[] aOld;
-		int[] phiTemp = cloneIntArray(phi);
+	private Set<Alignment> hillClimbingAndNeighboring(Alignment align, int jPegged, SentencePair p) {
+		Set<Alignment> result = new HashSet<Alignment>();
 
 		while (true) {
-			aOld = cloneIntArray(a);
 
-			for (Alignment neighbor : neighboring(a, jPegged, p, phiTemp)) {
-				int[] aNeigh = neighbor.getA();
-				int[] phiNeigh = neighbor.getPhi();
+			Set<Alignment> listAlign = findMaxNeighboring(align, jPegged, p);
 
-				double probNeigh = probability(aNeigh, p, phiNeigh);
-				double probNew = probability(a, p, phiTemp);
-
-				if (probNeigh > probNew) {
-					a = cloneIntArray(aNeigh);
-					phiTemp = cloneIntArray(phiNeigh);
-				}
-
+			// neighbors don't have higher probability, we have the result
+			if (listAlign.size() > 1 || align.getA().length == 1) {
+				result = listAlign;
+				break;
 			}
 
-			if (Arrays.equals(a, aOld)) {
-				break;
+			// neighbors have higher probability
+			for (Alignment newAlign : listAlign) {
+				align = newAlign;
 			}
 		}
 
-		return a;
+		return result;
 	}
 
-	/**
-	 * This function returns the neighboring alignments from the given alignment
-	 * by moving or swapping one distance.
-	 */
-	private List<Alignment> neighboring(int[] a, int jPegged, SentencePair p, int[] phi) {
-		List<Alignment> listN = new ArrayList<Alignment>();
+	private Set<Alignment> findMaxNeighboring(Alignment align, int jPegged, SentencePair p) {
+		int[] a = align.getA();
+		int[] phi = align.getPhi();
+
 		int le = p.getE().length();
 		int lf = p.getF().length();
+
+		double maxScore = 1.0;
+
+		int maxJ = -1;
+		int maxII = -1;
+		int maxJ1 = -1;
+		int maxJ2 = -1;
+
+		double[][][] scoreMove = new double[le + 1][lf + 1][lf + 1];
+		double[][] scoreSwap = new double[le + 1][le + 1];
 
 		// Moves
 		for (int j = 1; j <= le; j++) {
@@ -393,19 +457,18 @@ public class IBMModel3 extends IBMModel2 {
 				continue;
 			}
 
-			for (int i = 0; i <= lf; i++) {
-				int[] newA = cloneIntArray(a);
-				newA[j] = i;
+			int i = a[j];
 
-				int[] newPhi = cloneIntArray(phi);
+			for (int ii = 0; ii <= lf; ii++) {
+				if (ii != i) {
+					double score = scoreOfMove(align, p, i, ii, j);
+					if (score > maxScore) {
+						maxScore = score;
 
-				if (newPhi[a[j]] > 0) {
-					newPhi[a[j]]--;
-					newPhi[i]++;
-				}
-
-				if (!Arrays.equals(newA, a)) {
-					listN.add(new Alignment(newA, newPhi));
+						maxJ = j;
+						maxII = ii;
+					}
+					scoreMove[j][i][ii] = score;
 				}
 			}
 		}
@@ -421,14 +484,133 @@ public class IBMModel3 extends IBMModel2 {
 					continue;
 				}
 
-				int[] newA = cloneIntArray(a);
-				int[] newPhi = cloneIntArray(phi);
+				if (a[j2] != a[j1]) {
+					double score = scoreOfSwap(align, p, j1, j2);
+					if (score > maxScore) {
+						maxScore = score;
 
-				newA[j1] = a[j2];
-				newA[j2] = a[j1];
+						maxJ1 = j1;
+						maxJ2 = j2;
+					}
+					scoreSwap[j1][j2] = score;
+				}
+			}
+		}
 
-				if (!Arrays.equals(newA, a)) {
-					listN.add(new Alignment(newA, newPhi));
+		Set<Alignment> listN = new HashSet<Alignment>();
+
+		// returns the alignment having the highest probability which is bigger
+		// than the current probability
+		if (maxJ1 > 0 && maxJ2 > 0) {
+			int j1 = maxJ1;
+			int j2 = maxJ2;
+
+			int[] newA = cloneIntArray(a);
+			int[] newPhi = cloneIntArray(phi);
+
+			newA[j1] = a[j2];
+			newA[j2] = a[j1];
+
+			// Compute new probability
+			double newProb = maxScore * align.getProbability();
+			align = new Alignment(newA, newPhi, newProb);
+
+			listN.add(align);
+
+			return listN;
+		}
+
+		if (maxJ > 0 && maxII >= 0) {
+			int j = maxJ;
+			int ii = maxII;
+
+			int i = a[j];
+
+			int[] newA = cloneIntArray(a);
+			newA[j] = ii;
+
+			int[] newPhi = cloneIntArray(phi);
+
+			if (newPhi[i] > 0) {
+				newPhi[i]--;
+				newPhi[ii]++;
+			}
+
+			// Compute new probability
+			double newProb = maxScore * align.getProbability();
+			align = new Alignment(newA, newPhi, newProb);
+
+			listN.add(align);
+
+			return listN;
+		}
+
+		// no higher probability, returns the list
+		// Moves
+		for (int j = 1; j <= le; j++) {
+			if (j == jPegged) {
+				continue;
+			}
+
+			int i = a[j];
+
+			for (int ii = 0; ii <= lf; ii++) {
+				if (ii != i) {
+					int[] newA = cloneIntArray(a);
+					newA[j] = ii;
+
+					int[] newPhi = cloneIntArray(phi);
+
+					if (newPhi[i] > 0) {
+						newPhi[i]--;
+						newPhi[ii]++;
+					}
+
+					// Compute new probability
+					double score = scoreMove[j][i][ii];
+					double newProb;
+					if (score == 0.0) {
+						continue;
+					} else {
+						newProb = score * align.getProbability();
+					}
+					listN.add(new Alignment(newA, newPhi, newProb));
+				}
+
+				else {
+					listN.add(align);
+				}
+			}
+		}
+
+		// Swaps
+		for (int j1 = 1; j1 <= le; j1++) {
+			if (j1 == jPegged) {
+				continue;
+			}
+
+			for (int j2 = 1; j2 <= le; j2++) {
+				if (j2 == jPegged || j2 == j1) {
+					continue;
+				}
+
+				if (a[j2] != a[j1]) {
+
+					int[] newA = cloneIntArray(a);
+					int[] newPhi = cloneIntArray(phi);
+
+					newA[j1] = a[j2];
+					newA[j2] = a[j1];
+
+					// Compute new probability
+					double score = scoreSwap[j1][j2];
+					double newProb;
+					if (score == 0.0) {
+						continue;
+					} else {
+						newProb = score * align.getProbability();
+					}
+					listN.add(new Alignment(newA, newPhi, newProb));
 				}
 			}
 		}
@@ -437,13 +619,155 @@ public class IBMModel3 extends IBMModel2 {
 	}
 
 	/**
+	 * return (p(a'|e,f)/p(a|e,f)) whereas a' is move of a
+	 */
+	double scoreOfMove(Alignment al, SentencePair p, int i, int ii, int j) {
+		if (i == ii) {
+			return 1.0;
+		}
+
+		int le = p.getE().length();
+		int lf = p.getF().length();
+
+		int[] phi = al.getPhi();
+
+		if (le - 2 * phi[0] + 2 <= 0 && le - phi[0] <= 0) {
+			return 0.0;
+		}
+
+		int f_i = p.getF().get(i);
+		int f_ii = p.getF().get(ii);
+
+		double s = 1.0;
+
+		s *= t.get(p.getWordPair(j, ii));
+		s /= t.get(p.getWordPair(j, i));
+
+		if (i > 0 && ii > 0) {
+			s *= phi[ii] + 1;
+			s /= phi[i];
+
+			s *= n.get(getFertWord(phi[ii] + 1, f_ii));
+			s /= n.get(getFertWord(phi[ii], f_ii));
+
+			s *= n.get(getFertWord(phi[i] - 1, f_i));
+			s /= n.get(getFertWord(phi[i], f_i));
+
+			s *= d[j][ii][le][lf];
+			s /= d[j][i][le][lf];
+
+		}
+
+		if (i == 0) {
+			s *= phi[ii] + 1;
+
+			s *= n.get(getFertWord(phi[ii] + 1, f_ii));
+			s /= n.get(getFertWord(phi[ii], f_ii));
+
+			s *= d[j][ii][le][lf];
+
+			s *= phi[0];
+			s /= le - 2 * phi[0] + 1;
+
+			s *= le - phi[0] + 1;
+			s /= le - 2 * phi[0] + 2;
+
+			s *= Math.pow(p0, 2);
+			s /= 1 - p0;
+
+		}
+
+		if (ii == 0) {
+			s /= phi[i];
+
+			s *= n.get(getFertWord(phi[i] - 1, f_i));
+			s /= n.get(getFertWord(phi[i], f_i));
+
+			s /= d[j][i][le][lf];
+
+			s *= le - 2 * phi[0] - 1;
+			s /= le - phi[0];
+
+			s *= le - 2 * phi[0];
+			s /= phi[0] + 1;
+
+			s *= 1 - p0;
+			s /= Math.pow(p0, 2);
+
+		}
+
+		if (Double.isNaN(s)) {
+			return 0.0;
+		}
+
+		return s;
+	}
+
+	/**
+	 * return (p(a'|e,f)/p(a|e,f)) whereas a' is swap of a
+	 */
+	double scoreOfSwap(Alignment al, SentencePair p, int j1, int j2) {
+		int[] a = al.getA();
+		int i1 = a[j1];
+		int i2 = a[j2];
+
+		if (j1 == j2 || i1 == i2) {
+			return 1.0;
+		}
+
+		int le = p.getE().length();
+		int lf = p.getF().length();
+
+		double s = 1.0;
+
+		s *= t.get(p.getWordPair(j2, i1));
+		s /= t.get(p.getWordPair(j1, i1));
+
+		s *= t.get(p.getWordPair(j1, i2));
+		s /= t.get(p.getWordPair(j2, i2));
+
+		if (i1 > 0 && i2 > 0) {
+			s *= d[j2][i1][le][lf];
+			s /= d[j1][i1][le][lf];
+
+			s *= d[j1][i2][le][lf];
+			s /= d[j2][i2][le][lf];
+		}
+
+		else if (i1 == 0) {
+			s *= d[j1][i2][le][lf];
+			s /= d[j2][i2][le][lf];
+		}
+
+		else if (i2 == 0) {
+			s *= d[j2][i1][le][lf];
+			s /= d[j1][i1][le][lf];
+		}
+
+		// System.out.println("Swap: " + s);
+
+		if (Double.isNaN(s)) {
+			return 0.0;
+		}
+
+		return s;
+	}
+
+	/**
 	 * This function returns the probability given an alignment. The phi
 	 * variable represents the fertility according to the current alignment,
 	 * which records how many output words are generated by each input word.
 	 */
-	private double probability(int[] a, SentencePair p, int[] phi) {
+	private double probability(Alignment align, SentencePair p) {
+		int[] a = align.getA();
+		int[] phi = align.getPhi();
+
 		int le = p.getE().length();
 		int lf = p.getF().length();
+
+		if (le - 2 * phi[0] <= 0) {
+			return 0.0;
+		}
 
 		double p1 = 1 - p0;
 
@@ -465,7 +789,21 @@ public class IBMModel3 extends IBMModel2 {
 
 		// Compute fertilities term
 		for (int i = 0; i <= lf; i++) {
-			total *= CombinatoricsUtils.factorial(phi[i]) * n.get(new FertWord(phi[i], p.getF().get(i)));
+			int f = p.getF().get(i);
+			try {
+				total *= CombinatoricsUtils.factorial(phi[i]) * n.get(getFertWord(phi[i], f));
+			} catch (MathArithmeticException e) {
+				if (phi[i] > 20) {
+					total *= n.get(getFertWord(phi[i], f));
+					total *= CombinatoricsUtils.factorial(20);
+
+					for (int tmp = 21; tmp <= phi[i]; tmp++) {
+						total *= tmp;
+					}
+				} else {
+					throw new MathArithmeticException();
+				}
+			}
 
 			if (total == 0) {
 				return total;
