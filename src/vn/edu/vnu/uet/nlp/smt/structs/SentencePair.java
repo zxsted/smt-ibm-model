@@ -14,16 +14,22 @@
  *******************************************************************************/
 package vn.edu.vnu.uet.nlp.smt.structs;
 
+import java.io.Serializable;
+
 import vn.edu.vnu.uet.nlp.smt.utils.Utils;
 
 /**
  * @author tuanphong94
  *
  */
-public class SentencePair {
+public class SentencePair implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 3139637461226824969L;
 	private Sentence sentE;
 	private Sentence sentF;
-	int[][] wordPairs;
+	int[][] wordPairsHashCode;
 
 	public SentencePair(Sentence e, Sentence f) {
 		this.sentE = e;
@@ -33,7 +39,7 @@ public class SentencePair {
 	}
 
 	private void initWordPairs() {
-		wordPairs = new int[sentE.length() + 1][sentF.length() + 1];
+		wordPairsHashCode = new int[sentE.length() + 1][sentF.length() + 1];
 		int iStart = 1;
 		if (sentF.isForeign()) {
 			iStart = 0;
@@ -44,7 +50,7 @@ public class SentencePair {
 			for (int i = iStart; i <= sentF.length(); i++) {
 				int f = sentF.get(i);
 				int hashCode = Utils.generateTwoIntegersHashCode(e, f);
-				wordPairs[j][i] = hashCode;
+				wordPairsHashCode[j][i] = hashCode;
 			}
 		}
 	}
@@ -58,7 +64,7 @@ public class SentencePair {
 	}
 
 	public WordPair getWordPair(int j, int i) {
-		return new WordPair(sentE.get(j), sentF.get(i), wordPairs[j][i]);
+		return new WordPair(sentE.get(j), sentF.get(i), wordPairsHashCode[j][i]);
 	}
 
 }

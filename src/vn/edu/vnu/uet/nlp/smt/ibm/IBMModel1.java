@@ -25,7 +25,7 @@ import vn.edu.vnu.uet.nlp.smt.structs.WordPair;
  */
 public class IBMModel1 extends IBMModelAbstract {
 	public IBMModel1(String enFile, String foFile) {
-		super(enFile, foFile);
+		this(enFile, foFile, false);
 	}
 
 	public IBMModel1(String model) {
@@ -34,6 +34,10 @@ public class IBMModel1 extends IBMModelAbstract {
 
 	public IBMModel1(String enFile, String foFile, boolean usingNull) {
 		super(enFile, foFile, usingNull);
+	}
+
+	public IBMModel1(IBMModel1 md) {
+		super(md);
 	}
 
 	@Override

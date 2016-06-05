@@ -14,6 +14,7 @@
  *******************************************************************************/
 package vn.edu.vnu.uet.nlp.smt.structs;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,7 +24,11 @@ import vn.edu.vnu.uet.nlp.smt.utils.IConstants;
  * @author tuanphong94
  *
  */
-public class Sentence {
+public class Sentence implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 5715392102868112440L;
 	private List<Integer> content;
 	private boolean isForeign;
 

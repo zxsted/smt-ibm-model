@@ -57,6 +57,7 @@ public class IBMModel3 extends IBMModel2 {
 
 	public IBMModel3(String enFile, String foFile) {
 		super(enFile, foFile, true);
+		super.train();
 	}
 
 	public IBMModel3(String model) {
@@ -83,31 +84,36 @@ public class IBMModel3 extends IBMModel2 {
 		} catch (IOException | ClassNotFoundException e) {
 			e.printStackTrace();
 		}
+	}
 
+	public IBMModel3(IBMModel2 md2) {
+		super(md2);
+		this.maxLe = md2.maxLe;
+		this.maxLf = md2.maxLf;
+		this.a = md2.a;
 	}
 
 	@Override
 	public void train() {
-		super.train();
+		if (!this.usingNull) {
+			System.err.println("The provided IBM Model 2 does not use the NULL token!"
+					+ " Cannot train IBM Model 3 from this model!");
+			return;
+		}
 
 		System.out.print("Initializing IBM Model 3...");
 		long ss = System.currentTimeMillis();
 		p0 = 0.5;
 
-		System.out.print(" destroy alignment probability...");
 		countA = null;
 		totalA = null;
 
-		System.out.print(" distortion...");
 		initDistortion();
 		initCountD();
 		initTotalD();
 
-		System.out.print(" fetility...");
 		initFertility();
-		System.out.print(" count...");
 		initCountN();
-		System.out.print(" total...");
 		initTotalN();
 
 		long ee = System.currentTimeMillis();
@@ -140,7 +146,7 @@ public class IBMModel3 extends IBMModel2 {
 
 			countP0 = 0;
 			countP1 = 0;
-			int countIterP = 0;
+			int countPair = 0;
 
 			for (SentencePair p : sentPairs) {
 				int le = p.getE().length();
@@ -217,8 +223,8 @@ public class IBMModel3 extends IBMModel2 {
 					}
 				}
 
-				if ((++countIterP) % 10000 == 0) {
-					System.out.println("Pair " + countIterP + ": le = " + le + ", lf = " + lf + ", samples = "
+				if ((++countPair) % 10000 == 0) {
+					System.out.println("Pair " + countPair + ": le = " + le + ", lf = " + lf + ", samples = "
 							+ listA.size() + ", total samples = " + totalSample + ", total time: "
 							+ (System.currentTimeMillis() - start) + " ms");
 				}
@@ -829,13 +835,34 @@ public class IBMModel3 extends IBMModel2 {
 		return dest;
 	}
 
+	public double getDistortionProbability(int j, int i, int le, int lf) {
+		try {
+			return d[j][i][le][lf];
+		} catch (ArrayIndexOutOfBoundsException e) {
+			return 0.0;
+		}
+	}
+
+	public double getFertilityProbability(int fert, int f) {
+		FertWord fw = new FertWord(fert, f);
+		if (n.contains(fw)) {
+			return n.get(fw);
+		} else {
+			return 0.0;
+		}
+	}
+
+	public double getP0() {
+		return p0;
+	}
+
 	@Override
-	public void printTransProbs() {
+	public void printModels() {
 		if (enDict.size() > 10 || foDict.size() > 10) {
 			return;
 		}
 
-		super.printTransProbs();
+		super.printModels();
 
 		System.out.println("Distortion probabilities:");
 		for (int lf = 1; lf <= maxLf; lf++) {
@@ -853,8 +880,10 @@ public class IBMModel3 extends IBMModel2 {
 		System.out.println("Fertility probabilities:");
 		for (int f = 0; f < foDict.size(); f++) {
 			for (int fert = 0; fert <= maxLe; fert++) {
-				FertWord fw = new FertWord(fert, f);
-				System.out.println("n(" + fw.getFert() + "|" + foDict.getWord(fw.getF()) + ") = " + n.get(fw));
+				FertWord fw = getFertWord(fert, f);
+				if (n.contains(fw)) {
+					System.out.println("n(" + fw.getFert() + "|" + foDict.getWord(fw.getF()) + ") = " + n.get(fw));
+				}
 			}
 		}
 

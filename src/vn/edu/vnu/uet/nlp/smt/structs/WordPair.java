@@ -43,7 +43,7 @@ public class WordPair implements Serializable {
 	public WordPair(final int e, final int f) {
 		this.e = e;
 		this.f = f;
-		Utils.generateTwoIntegersHashCode(e, f);
+		this.hashCode = Utils.generateTwoIntegersHashCode(e, f);
 	}
 
 	public WordPair(final int e, final int f, final int hashCode) {

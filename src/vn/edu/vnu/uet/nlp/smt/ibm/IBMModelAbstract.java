@@ -58,8 +58,8 @@ public abstract class IBMModelAbstract {
 	boolean usingNull; // use NULL token in foreign sentences or not? Model 3
 						// requires usingNull = true
 
-	static int iStart; // iteration starting point for foreign word (0 if use
-						// NULL token in foreign sentences or 1 otherwise)
+	int iStart; // iteration starting point for foreign word (0 if use
+				// NULL token in foreign sentences or 1 otherwise)
 
 	static final double alpha = 1E-10; // use for Laplace smoothing
 
@@ -107,11 +107,37 @@ public abstract class IBMModelAbstract {
 		String tFileName = model + IConstants.transProbsModelName;
 		String enFileName = model + IConstants.enDictName;
 		String foFileName = model + IConstants.foDictName;
+		String sentFileName = model + IConstants.sentFileName;
 
 		try {
+			System.out.print("Loading translation probability...");
+			long start = System.currentTimeMillis();
 			t = Utils.loadObject(tFileName);
+			long end = System.currentTimeMillis();
+			long time = end - start;
+			System.out.println(" [" + time + " ms]");
+
+			System.out.print("Loading english dictionary...");
+			start = System.currentTimeMillis();
 			enDict = Utils.loadObject(enFileName);
+			end = System.currentTimeMillis();
+			time = end - start;
+			System.out.println(" [" + time + " ms]");
+
+			System.out.print("Loading foreign dictionary...");
+			start = System.currentTimeMillis();
 			foDict = Utils.loadObject(foFileName);
+			end = System.currentTimeMillis();
+			time = end - start;
+			System.out.println(" [" + time + " ms]");
+
+			System.out.print("Loading sentence pairs...");
+			start = System.currentTimeMillis();
+			sentPairs = Utils.loadObject(sentFileName);
+			end = System.currentTimeMillis();
+			time = end - start;
+			System.out.println(" [" + time + " ms]");
+
 		} catch (IOException | ClassNotFoundException e) {
 			e.printStackTrace();
 		}
@@ -122,6 +148,15 @@ public abstract class IBMModelAbstract {
 		} else {
 			iStart = 1;
 		}
+	}
+
+	public IBMModelAbstract(IBMModelAbstract md) {
+		this.usingNull = md.usingNull;
+		this.iStart = md.iStart;
+		this.enDict = md.enDict;
+		this.foDict = md.foDict;
+		this.sentPairs = md.sentPairs;
+		this.t = md.t;
 	}
 
 	public abstract void train();
@@ -199,7 +234,7 @@ public abstract class IBMModelAbstract {
 
 	}
 
-	public double getProb(String enWord, String foWord) {
+	public double getTransProb(String enWord, String foWord) {
 		return getProb(enDict.getIndex(enWord), foDict.getIndex(foWord));
 	}
 
@@ -208,7 +243,7 @@ public abstract class IBMModelAbstract {
 		if (t.contains(ef)) {
 			return t.get(ef);
 		}
-		return 0;
+		return 0.0;
 	}
 
 	public Dictionary getEngDict() {
@@ -219,7 +254,7 @@ public abstract class IBMModelAbstract {
 		return foDict;
 	}
 
-	public void printTransProbs() {
+	public void printModels() {
 		if (enDict.size() > 10 || foDict.size() > 10) {
 			return;
 		}
@@ -259,6 +294,10 @@ public abstract class IBMModelAbstract {
 		if (!folder.endsWith("/")) {
 			folder = folder + File.pathSeparator;
 		}
+
+		// Save sentence pairs
+		String sentFileName = folder + IConstants.sentFileName;
+		Utils.saveObject(sentPairs, sentFileName);
 
 		// Save translation probabilities
 		String tFileName = folder + IConstants.transProbsModelName;

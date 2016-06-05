@@ -36,7 +36,7 @@ public class IBMModel2 extends IBMModel1 {
 	int maxLe = 0, maxLf = 0;
 
 	public IBMModel2(String enFile, String foFile) {
-		super(enFile, foFile);
+		this(enFile, foFile, false);
 	}
 
 	public IBMModel2(String model) {
@@ -48,7 +48,12 @@ public class IBMModel2 extends IBMModel1 {
 
 		String aFileName = model + IConstants.alignmentModelName;
 		try {
+			System.out.print("Loading alignment probability...");
+			long start = System.currentTimeMillis();
 			a = Utils.loadArray(aFileName);
+			long end = System.currentTimeMillis();
+			long time = end - start;
+			System.out.println(" [" + time + " ms]");
 			String maxLeLf = Utils.loadMaxLeLf(aFileName);
 			String[] tokens = maxLeLf.split(" ");
 			maxLe = Integer.parseInt(tokens[0]);
@@ -60,6 +65,11 @@ public class IBMModel2 extends IBMModel1 {
 
 	public IBMModel2(String enFile, String foFile, boolean usingNull) {
 		super(enFile, foFile, usingNull);
+		super.train();
+	}
+
+	public IBMModel2(IBMModel1 md1) {
+		super(md1);
 	}
 
 	private void initAlignment() {
@@ -89,8 +99,6 @@ public class IBMModel2 extends IBMModel1 {
 
 	@Override
 	public void train() {
-		super.train();
-
 		System.out.print("Initializing IBM Model 2...");
 		long ss = System.currentTimeMillis();
 		initAlignment();
@@ -191,13 +199,21 @@ public class IBMModel2 extends IBMModel1 {
 		countA = new double[maxLf + 1][maxLe + 1][maxLe + 1][maxLf + 1];
 	}
 
+	public double getAlignmentProbability(int i, int j, int le, int lf) {
+		try {
+			return a[i][j][le][lf];
+		} catch (ArrayIndexOutOfBoundsException e) {
+			return 0.0;
+		}
+	}
+
 	@Override
-	public void printTransProbs() {
+	public void printModels() {
 		if (enDict.size() > 10 || foDict.size() > 10) {
 			return;
 		}
 
-		super.printTransProbs();
+		super.printModels();
 
 		System.out.println("Alignment probabilities:");
 		for (int lf = 1; lf <= maxLf; lf++) {
