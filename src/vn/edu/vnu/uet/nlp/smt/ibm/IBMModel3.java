@@ -222,8 +222,8 @@ public class IBMModel3 extends IBMModel2 {
 						}
 					}
 				}
-
-				if ((++countPair) % 10000 == 0) {
+				++countPair;
+				if (countPair % 10000 == 0 || countPair == sentPairs.size()) {
 					System.out.println("Pair " + countPair + ": le = " + le + ", lf = " + lf + ", samples = "
 							+ listA.size() + ", total samples = " + totalSample + ", total time: "
 							+ (System.currentTimeMillis() - start) + " ms");

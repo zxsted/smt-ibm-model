@@ -16,8 +16,11 @@ package vn.edu.vnu.uet.nlp.smt.bin;
 
 import java.io.IOException;
 
-import vn.edu.vnu.uet.nlp.smt.ibm.IBMModel2;
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+
 import vn.edu.vnu.uet.nlp.smt.ibm.IBMModel3;
+import vn.edu.vnu.uet.nlp.smt.ibm.IBMModelAbstract;
 
 /**
  * @author tuanphong94
@@ -26,48 +29,36 @@ import vn.edu.vnu.uet.nlp.smt.ibm.IBMModel3;
 public class Main {
 
 	public static void main(String[] args) throws IOException {
-		// String enFile = "/home/tuanphong94/workspace/smt-data/toy/toy.en";
-		// String foFile = "/home/tuanphong94/workspace/smt-data/toy/toy.de";
-		// String enFile = "/home/tuanphong94/workspace/smt-data/50.en";
-		// String foFile = "/home/tuanphong94/workspace/smt-data/50.vn";
-		// String enFile = "/home/tuanphong94/workspace/smt-data/200.en";
-		// String foFile = "/home/tuanphong94/workspace/smt-data/200.vn";
-		// String enFile = "/home/tuanphong94/workspace/smt-data/1k.en";
-		// String foFile = "/home/tuanphong94/workspace/smt-data/1k.vn";
-		// String enFile = "/home/tuanphong94/workspace/smt-data/100k.en";
-		// String foFile = "/home/tuanphong94/workspace/smt-data/100k.vn";
-//		String enFile = "/home/tuanphong94/workspace/smt-data/290k.en";
-//		String foFile = "/home/tuanphong94/workspace/smt-data/290k.vn";
-//		IBMModel2 model = new IBMModel2(enFile, foFile, true);
-//		model.train();
-//		// model.printModels();
-//		model.save("/home/tuanphong94/workspace/smt-data/model/");
+		RunOption option = new RunOption();
+		CmdLineParser parser = new CmdLineParser(option);
 
-		// System.out.println("Load saved model...");
-		// IBMModel3 loadedModel = new
-		// IBMModel3("/home/tuanphong94/workspace/smt-data/model/");
-		// loadedModel.printTransProbs();
+		if (args.length != 6) {
+			System.out.println(Main.class.getName() + " [arguments..]");
+			parser.printUsage(System.out);
+			return;
+		}
 
-		 String folder = "/home/tuanphong94/workspace/smt-data/model/";
+		try {
+			parser.parseArgument(args);
+			IBMModelAbstract.MAX_ITER_1 = option.n1;
+			IBMModelAbstract.MAX_ITER_2 = option.n2;
+			IBMModelAbstract.MAX_ITER_3 = option.n3;
 
-		// IBMModel1 md1 = new IBMModel1(enFile, foFile, true);
-		// md1.train();
-		// md1.printModels();
-		// md1.save(folder);
+			String enFile = option.tar.getAbsolutePath();
+			String foFile = option.src.getAbsolutePath();
 
-		// IBMModel1 md1 = new IBMModel1(folder);
-		//
-		// IBMModel2 md2 = new IBMModel2(md1);
-		// md2.train();
-		// md2.printModels();
-		// md2.save(folder);
+			IBMModel3 model = new IBMModel3(enFile, foFile);
+			model.train();
+			model.save(option.output.getAbsolutePath());
 
-		 IBMModel2 md2 = new IBMModel2(folder);
-		
-		 IBMModel3 md3 = new IBMModel3(md2);
-		 md3.train();
-		// md3.printModels();
-		// md3.save(folder);
+		} catch (CmdLineException e) {
+			System.out.println(Main.class.getName() + " [arguments..]");
+			e.printStackTrace();
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+			e.printStackTrace();
+		}
+
 	}
 
 }

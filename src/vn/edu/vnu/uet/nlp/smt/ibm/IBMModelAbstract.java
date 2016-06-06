@@ -50,9 +50,9 @@ public abstract class IBMModelAbstract {
 	TObjectDoubleHashMap<WordPair> countT;
 	double[] totalT;
 
-	static final int MAX_ITER_1 = 3;
-	static final int MAX_ITER_2 = 3;
-	static final int MAX_ITER_3 = 3;
+	public static int MAX_ITER_1 = 3;
+	public static int MAX_ITER_2 = 3;
+	public static int MAX_ITER_3 = 3;
 
 	protected boolean CONVERGE = false;
 	boolean usingNull; // use NULL token in foreign sentences or not? Model 3
