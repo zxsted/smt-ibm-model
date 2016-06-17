@@ -43,7 +43,7 @@ public class IBMModel2 extends IBMModel1 {
 		super(model);
 
 		if (!model.endsWith("/")) {
-			model = model + File.pathSeparator;
+			model = model + "/";
 		}
 
 		String aFileName = model + IConstants.alignmentModelName;
@@ -209,7 +209,7 @@ public class IBMModel2 extends IBMModel1 {
 
 	@Override
 	public void printModels() {
-		if (enDict.size() > 10 || foDict.size() > 10) {
+		if (tarDict.size() > 10 || srcDict.size() > 10) {
 			return;
 		}
 
@@ -240,7 +240,7 @@ public class IBMModel2 extends IBMModel1 {
 		}
 
 		if (!folder.endsWith("/")) {
-			folder = folder + File.pathSeparator;
+			folder = folder + "/";
 		}
 
 		// Save alignment

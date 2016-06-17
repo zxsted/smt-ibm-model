@@ -3,3 +3,4 @@
 .settings/
 *.jar
 target/
+src/vn/edu/vnu/uet/nlp/smt/alignment/

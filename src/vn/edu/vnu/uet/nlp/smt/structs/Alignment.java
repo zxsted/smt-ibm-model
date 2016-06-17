@@ -1,31 +1,22 @@
 package vn.edu.vnu.uet.nlp.smt.structs;
 
+import java.util.Arrays;
+
 public class Alignment {
 	int[] a;
 	int[] phi;
 	double probability;
-	String toString;
 	int hashCode;
 
 	public Alignment(int[] a, int[] phi) {
 		this.a = a;
 		this.phi = phi;
 
-		generateString();
 		generateHashCode();
 	}
 
 	private void generateHashCode() {
-		hashCode = toString.hashCode();
-	}
-
-	private void generateString() {
-		StringBuilder sb = new StringBuilder();
-		for (int i : a) {
-			sb.append(i + " ");
-		}
-
-		toString = sb.toString().trim();
+		hashCode = Arrays.hashCode(a);
 	}
 
 	public Alignment(int[] a, int[] phi, double probability) {
@@ -47,11 +38,6 @@ public class Alignment {
 
 	public double getProbability() {
 		return probability;
-	}
-
-	@Override
-	public String toString() {
-		return toString;
 	}
 
 	@Override

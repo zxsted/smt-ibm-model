@@ -32,7 +32,7 @@ public class Main {
 		RunOption option = new RunOption();
 		CmdLineParser parser = new CmdLineParser(option);
 
-		if (args.length != 6) {
+		if (args.length < 6) {
 			System.out.println(Main.class.getName() + " [arguments..]");
 			parser.printUsage(System.out);
 			return;

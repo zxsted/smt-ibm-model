@@ -41,7 +41,7 @@ import vn.edu.vnu.uet.nlp.smt.utils.Utils;
  */
 public class IBMModel3 extends IBMModel2 {
 
-	double[][][][] d; // distoron
+	double[][][][] d; // distortion
 	double[][][][] countD;
 	double[][][] totalD;
 
@@ -64,7 +64,7 @@ public class IBMModel3 extends IBMModel2 {
 		super(model);
 
 		if (!model.endsWith("/")) {
-			model = model + File.pathSeparator;
+			model = model + "/";
 		}
 
 		String dFileName = model + IConstants.distortionModelName;
@@ -223,7 +223,7 @@ public class IBMModel3 extends IBMModel2 {
 					}
 				}
 				++countPair;
-				if (countPair % 10000 == 0 || countPair == sentPairs.size()) {
+				if (countPair % 100 == 0 || countPair == sentPairs.size()) {
 					System.out.println("Pair " + countPair + ": le = " + le + ", lf = " + lf + ", samples = "
 							+ listA.size() + ", total samples = " + totalSample + ", total time: "
 							+ (System.currentTimeMillis() - start) + " ms");
@@ -285,7 +285,7 @@ public class IBMModel3 extends IBMModel2 {
 	}
 
 	private void initTotalN() {
-		totalN = new double[foDict.size()];
+		totalN = new double[srcDict.size()];
 
 	}
 
@@ -304,7 +304,7 @@ public class IBMModel3 extends IBMModel2 {
 
 	private void initFertility() {
 		n = new TObjectDoubleHashMap<FertWord>();
-		fertWordHashCode = new int[maxLe + 1][foDict.size()];
+		fertWordHashCode = new int[maxLe + 1][srcDict.size()];
 
 		double value = 1 / (double) (maxLe + 1);
 
@@ -858,7 +858,7 @@ public class IBMModel3 extends IBMModel2 {
 
 	@Override
 	public void printModels() {
-		if (enDict.size() > 10 || foDict.size() > 10) {
+		if (tarDict.size() > 10 || srcDict.size() > 10) {
 			return;
 		}
 
@@ -878,11 +878,11 @@ public class IBMModel3 extends IBMModel2 {
 		}
 
 		System.out.println("Fertility probabilities:");
-		for (int f = 0; f < foDict.size(); f++) {
+		for (int f = 0; f < srcDict.size(); f++) {
 			for (int fert = 0; fert <= maxLe; fert++) {
 				FertWord fw = getFertWord(fert, f);
 				if (n.contains(fw)) {
-					System.out.println("n(" + fw.getFert() + "|" + foDict.getWord(fw.getF()) + ") = " + n.get(fw));
+					System.out.println("n(" + fw.getFert() + "|" + srcDict.getWord(fw.getF()) + ") = " + n.get(fw));
 				}
 			}
 		}
@@ -902,7 +902,7 @@ public class IBMModel3 extends IBMModel2 {
 		}
 
 		if (!folder.endsWith("/")) {
-			folder = folder + File.pathSeparator;
+			folder = folder + "/";
 		}
 
 		// Save distortion
