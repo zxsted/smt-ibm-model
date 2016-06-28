@@ -63,8 +63,8 @@ public class IBMModel2 extends IBMModel1 {
 		}
 	}
 
-	public IBMModel2(String enFile, String foFile, boolean usingNull) {
-		super(enFile, foFile, usingNull);
+	public IBMModel2(String targetFile, String sourceFile, boolean usingNull) {
+		super(targetFile, sourceFile, usingNull);
 		super.train();
 	}
 
@@ -209,7 +209,7 @@ public class IBMModel2 extends IBMModel1 {
 
 	@Override
 	public void printModels() {
-		if (tarDict.size() > 10 || srcDict.size() > 10) {
+		if (enDict.size() > 10 || foDict.size() > 10) {
 			return;
 		}
 

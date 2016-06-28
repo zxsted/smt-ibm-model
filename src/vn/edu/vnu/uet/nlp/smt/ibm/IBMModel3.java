@@ -55,8 +55,8 @@ public class IBMModel3 extends IBMModel2 {
 
 	int[][] fertWordHashCode;
 
-	public IBMModel3(String enFile, String foFile) {
-		super(enFile, foFile, true);
+	public IBMModel3(String targetFile, String sourceFile) {
+		super(targetFile, sourceFile, true);
 		super.train();
 	}
 
@@ -152,23 +152,31 @@ public class IBMModel3 extends IBMModel2 {
 				int le = p.getE().length();
 				int lf = p.getF().length();
 
-				long startSample = System.currentTimeMillis();
+				// log
+				// if (p.getE().length() > 1)
+				// System.out.print("Pair " + (countPair + 1) + ": " +
+				// tarDict.getWord(p.getE().get(1)) + " "
+				// + tarDict.getWord(p.getE().get(2)) + "...");
+
 				// Sample the alignment space
+				long startSample = System.currentTimeMillis();
 				Set<Alignment> listA = sample(p);
 				long endSample = System.currentTimeMillis();
 				timeSample += endSample - startSample;
 				totalSample += listA.size();
 
+				// log
+				// System.out.print(" Sampling: OK.");
+
 				// Collect counts
 				double subTotal = 0;
 
 				for (Alignment align : listA) {
-					// System.out.println(align);
-					subTotal += align.getProbability() + alpha;
+					subTotal += align.getProbability();
 				}
 
 				for (Alignment align : listA) {
-					double c = (align.getProbability() + alpha) / subTotal;
+					double c = align.getProbability() / subTotal;
 					int cNull = 0;
 
 					for (int j = 1; j <= le; j++) {
@@ -222,15 +230,20 @@ public class IBMModel3 extends IBMModel2 {
 						}
 					}
 				}
+
+				listA.clear();
+
 				++countPair;
-				if (countPair % 100 == 0 || countPair == sentPairs.size()) {
-					System.out.println("Pair " + countPair + ": le = " + le + ", lf = " + lf + ", samples = "
-							+ listA.size() + ", total samples = " + totalSample + ", total time: "
+				if (countPair % 1000 == 0 || countPair == sentPairs.size()) {
+					System.out.println("Pair " + countPair + ", total samples = " + totalSample + ", total time: "
 							+ (System.currentTimeMillis() - start) + " ms");
 				}
 
 				long endCount = System.currentTimeMillis();
 				timeCount += endCount - endSample;
+
+				// log
+				// System.out.println(" Counting: OK.");
 			}
 
 			long startUpdate = System.currentTimeMillis();
@@ -285,7 +298,7 @@ public class IBMModel3 extends IBMModel2 {
 	}
 
 	private void initTotalN() {
-		totalN = new double[srcDict.size()];
+		totalN = new double[foDict.size()];
 
 	}
 
@@ -304,7 +317,7 @@ public class IBMModel3 extends IBMModel2 {
 
 	private void initFertility() {
 		n = new TObjectDoubleHashMap<FertWord>();
-		fertWordHashCode = new int[maxLe + 1][srcDict.size()];
+		fertWordHashCode = new int[maxLe + 1][foDict.size()];
 
 		double value = 1 / (double) (maxLe + 1);
 
@@ -574,12 +587,10 @@ public class IBMModel3 extends IBMModel2 {
 
 					// Compute new probability
 					double score = scoreMove[j][i][ii];
-					double newProb;
-					if (score == 0.0) {
+					if (score == 0) {
 						continue;
-					} else {
-						newProb = score * align.getProbability();
 					}
+					double newProb = score * align.getProbability();
 					listN.add(new Alignment(newA, newPhi, newProb));
 				}
 
@@ -610,12 +621,10 @@ public class IBMModel3 extends IBMModel2 {
 
 					// Compute new probability
 					double score = scoreSwap[j1][j2];
-					double newProb;
-					if (score == 0.0) {
+					if (score == 0) {
 						continue;
-					} else {
-						newProb = score * align.getProbability();
 					}
+					double newProb = score * align.getProbability();
 					listN.add(new Alignment(newA, newPhi, newProb));
 				}
 			}
@@ -644,61 +653,61 @@ public class IBMModel3 extends IBMModel2 {
 		int f_i = p.getF().get(i);
 		int f_ii = p.getF().get(ii);
 
-		double s = 1.0;
+		double s = 0;
 
-		s *= t.get(p.getWordPair(j, ii));
-		s /= t.get(p.getWordPair(j, i));
+		s += Math.log(t.get(p.getWordPair(j, ii)));
+		s -= Math.log(t.get(p.getWordPair(j, i)));
 
 		if (i > 0 && ii > 0) {
-			s *= phi[ii] + 1;
-			s /= phi[i];
+			s += Math.log(phi[ii] + 1);
+			s -= Math.log(phi[i]);
 
-			s *= n.get(getFertWord(phi[ii] + 1, f_ii));
-			s /= n.get(getFertWord(phi[ii], f_ii));
+			s += Math.log(n.get(getFertWord(phi[ii] + 1, f_ii)));
+			s -= Math.log(n.get(getFertWord(phi[ii], f_ii)));
 
-			s *= n.get(getFertWord(phi[i] - 1, f_i));
-			s /= n.get(getFertWord(phi[i], f_i));
+			s += Math.log(n.get(getFertWord(phi[i] - 1, f_i)));
+			s -= Math.log(n.get(getFertWord(phi[i], f_i)));
 
-			s *= d[j][ii][le][lf];
-			s /= d[j][i][le][lf];
+			s += Math.log(d[j][ii][le][lf]);
+			s -= Math.log(d[j][i][le][lf]);
 
 		}
 
 		if (i == 0) {
-			s *= phi[ii] + 1;
+			s += Math.log(phi[ii] + 1);
 
-			s *= n.get(getFertWord(phi[ii] + 1, f_ii));
-			s /= n.get(getFertWord(phi[ii], f_ii));
+			s += Math.log(n.get(getFertWord(phi[ii] + 1, f_ii)));
+			s -= Math.log(n.get(getFertWord(phi[ii], f_ii)));
 
-			s *= d[j][ii][le][lf];
+			s += Math.log(d[j][ii][le][lf]);
 
-			s *= phi[0];
-			s /= le - 2 * phi[0] + 1;
+			s += Math.log(phi[0]);
+			s -= Math.log(le - 2 * phi[0] + 1);
 
-			s *= le - phi[0] + 1;
-			s /= le - 2 * phi[0] + 2;
+			s += Math.log(le - phi[0] + 1);
+			s -= Math.log(le - 2 * phi[0] + 2);
 
-			s *= Math.pow(p0, 2);
-			s /= 1 - p0;
+			s += Math.log(Math.pow(p0, 2));
+			s -= Math.log(1 - p0);
 
 		}
 
 		if (ii == 0) {
-			s /= phi[i];
+			s -= Math.log(phi[i]);
 
-			s *= n.get(getFertWord(phi[i] - 1, f_i));
-			s /= n.get(getFertWord(phi[i], f_i));
+			s += Math.log(n.get(getFertWord(phi[i] - 1, f_i)));
+			s -= Math.log(n.get(getFertWord(phi[i], f_i)));
 
-			s /= d[j][i][le][lf];
+			s -= Math.log(d[j][i][le][lf]);
 
-			s *= le - 2 * phi[0] - 1;
-			s /= le - phi[0];
+			s += Math.log(le - 2 * phi[0] - 1);
+			s -= Math.log(le - phi[0]);
 
-			s *= le - 2 * phi[0];
-			s /= phi[0] + 1;
+			s += Math.log(le - 2 * phi[0]);
+			s -= Math.log(phi[0] + 1);
 
-			s *= 1 - p0;
-			s /= Math.pow(p0, 2);
+			s += Math.log(1 - p0);
+			s -= Math.log(Math.pow(p0, 2));
 
 		}
 
@@ -706,7 +715,7 @@ public class IBMModel3 extends IBMModel2 {
 			return 0.0;
 		}
 
-		return s;
+		return Math.exp(s);
 	}
 
 	/**
@@ -724,30 +733,30 @@ public class IBMModel3 extends IBMModel2 {
 		int le = p.getE().length();
 		int lf = p.getF().length();
 
-		double s = 1.0;
+		double s = 0.0;
 
-		s *= t.get(p.getWordPair(j2, i1));
-		s /= t.get(p.getWordPair(j1, i1));
+		s += Math.log(t.get(p.getWordPair(j2, i1)));
+		s -= Math.log(t.get(p.getWordPair(j1, i1)));
 
-		s *= t.get(p.getWordPair(j1, i2));
-		s /= t.get(p.getWordPair(j2, i2));
+		s += Math.log(t.get(p.getWordPair(j1, i2)));
+		s -= Math.log(t.get(p.getWordPair(j2, i2)));
 
 		if (i1 > 0 && i2 > 0) {
-			s *= d[j2][i1][le][lf];
-			s /= d[j1][i1][le][lf];
+			s += Math.log(d[j2][i1][le][lf]);
+			s -= Math.log(d[j1][i1][le][lf]);
 
-			s *= d[j1][i2][le][lf];
-			s /= d[j2][i2][le][lf];
+			s += Math.log(d[j1][i2][le][lf]);
+			s -= Math.log(d[j2][i2][le][lf]);
 		}
 
 		else if (i1 == 0) {
-			s *= d[j1][i2][le][lf];
-			s /= d[j2][i2][le][lf];
+			s += Math.log(d[j1][i2][le][lf]);
+			s -= Math.log(d[j2][i2][le][lf]);
 		}
 
 		else if (i2 == 0) {
-			s *= d[j2][i1][le][lf];
-			s /= d[j1][i1][le][lf];
+			s += Math.log(d[j2][i1][le][lf]);
+			s -= Math.log(d[j1][i1][le][lf]);
 		}
 
 		// System.out.println("Swap: " + s);
@@ -756,7 +765,7 @@ public class IBMModel3 extends IBMModel2 {
 			return 0.0;
 		}
 
-		return s;
+		return Math.exp(s);
 	}
 
 	/**
@@ -777,56 +786,43 @@ public class IBMModel3 extends IBMModel2 {
 
 		double p1 = 1 - p0;
 
-		double total = 1.0;
+		double total = 0.0;
 
 		// Compute the NULL insertion
-		total *= Math.pow(p1, phi[0]) * Math.pow(p0, le - 2 * phi[0]);
-		if (total == 0) {
-			return total;
-		}
+		total += Math.log(Math.pow(p1, phi[0]) * Math.pow(p0, le - 2 * phi[0]));
 
 		// Compute the combination (le - fert[0]) choose fert[0]
 		for (int i = 1; i <= phi[0]; i++) {
-			total *= (le - phi[0] - i + 1) / i;
-			if (total == 0) {
-				return total;
-			}
+			total += Math.log((le - phi[0] - i + 1) / i);
 		}
 
 		// Compute fertilities term
 		for (int i = 0; i <= lf; i++) {
 			int f = p.getF().get(i);
 			try {
-				total *= CombinatoricsUtils.factorial(phi[i]) * n.get(getFertWord(phi[i], f));
+				total += Math.log(CombinatoricsUtils.factorial(phi[i]) * n.get(getFertWord(phi[i], f)));
 			} catch (MathArithmeticException e) {
 				if (phi[i] > 20) {
-					total *= n.get(getFertWord(phi[i], f));
-					total *= CombinatoricsUtils.factorial(20);
+					total += Math.log(n.get(getFertWord(phi[i], f)));
+					total += Math.log(CombinatoricsUtils.factorial(20));
 
 					for (int tmp = 21; tmp <= phi[i]; tmp++) {
-						total *= tmp;
+						total += Math.log(tmp);
 					}
 				} else {
 					throw new MathArithmeticException();
 				}
-			}
-
-			if (total == 0) {
-				return total;
 			}
 		}
 
 		// Multiply the lexical and distortion probabilities
 		for (int j = 1; j <= le; j++) {
 			int i = a[j];
-			total *= t.get(p.getWordPair(j, i));
-			total *= d[j][i][le][lf];
-			if (total == 0) {
-				return total;
-			}
+			total += Math.log(t.get(p.getWordPair(j, i)));
+			total += Math.log(d[j][i][le][lf]);
 		}
 
-		return total;
+		return Math.exp(total);
 	}
 
 	static int[] cloneIntArray(int[] src) {
@@ -858,7 +854,7 @@ public class IBMModel3 extends IBMModel2 {
 
 	@Override
 	public void printModels() {
-		if (tarDict.size() > 10 || srcDict.size() > 10) {
+		if (enDict.size() > 10 || foDict.size() > 10) {
 			return;
 		}
 
@@ -878,11 +874,11 @@ public class IBMModel3 extends IBMModel2 {
 		}
 
 		System.out.println("Fertility probabilities:");
-		for (int f = 0; f < srcDict.size(); f++) {
+		for (int f = 0; f < foDict.size(); f++) {
 			for (int fert = 0; fert <= maxLe; fert++) {
 				FertWord fw = getFertWord(fert, f);
 				if (n.contains(fw)) {
-					System.out.println("n(" + fw.getFert() + "|" + srcDict.getWord(fw.getF()) + ") = " + n.get(fw));
+					System.out.println("n(" + fw.getFert() + "|" + foDict.getWord(fw.getF()) + ") = " + n.get(fw));
 				}
 			}
 		}

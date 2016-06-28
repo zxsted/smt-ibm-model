@@ -43,14 +43,17 @@ public class Main {
 			IBMModelAbstract.MAX_ITER_1 = option.n1;
 			IBMModelAbstract.MAX_ITER_2 = option.n2;
 			IBMModelAbstract.MAX_ITER_3 = option.n3;
+			IBMModelAbstract.MAX_LENGTH = option.maxLength;
 
 			String enFile = option.tar.getAbsolutePath();
 			String foFile = option.src.getAbsolutePath();
 
 			IBMModel3 model = new IBMModel3(enFile, foFile);
 			model.train();
-			model.save(option.output.getAbsolutePath());
 
+			System.out.println("Saving...");
+			model.save(option.output.getAbsolutePath());
+			System.out.println("Finish.");
 		} catch (CmdLineException e) {
 			System.out.println(Main.class.getName() + " [arguments..]");
 			e.printStackTrace();

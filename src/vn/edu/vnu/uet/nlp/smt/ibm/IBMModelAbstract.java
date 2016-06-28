@@ -43,15 +43,15 @@ public abstract class IBMModelAbstract {
 
 	List<SentencePair> sentPairs;
 
-	Dictionary tarDict;
-	Dictionary srcDict;
+	Dictionary enDict;
+	Dictionary foDict;
 
 	TObjectDoubleHashMap<WordPair> t; // translation probability table t(e|f)
 	TObjectDoubleHashMap<WordPair> countT;
 	double[] totalT;
 
-	public static int MAX_ITER_1 = 3;
-	public static int MAX_ITER_2 = 3;
+	public static int MAX_ITER_1 = 5;
+	public static int MAX_ITER_2 = 5;
 	public static int MAX_ITER_3 = 3;
 
 	protected boolean CONVERGE = false;
@@ -61,9 +61,13 @@ public abstract class IBMModelAbstract {
 	int iStart; // iteration starting point for foreign word (0 if use
 				// NULL token in foreign sentences or 1 otherwise)
 
-	static final double alpha = 1E-10; // use for Laplace smoothing
+	static final double alpha = 1E-3; // use for Laplace smoothing
+	static final double MIN_PROB_VALUE = 1E-5;
+	static final double MIN_SCORE_VALUE = 1E-5;
 
-	public IBMModelAbstract(String target, String source, final boolean usingNull) {
+	public static int MAX_LENGTH = 30;
+
+	public IBMModelAbstract(String targetFile, String sourceFile, final boolean usingNull) {
 		System.out.print("Reading training data...");
 
 		long start = System.currentTimeMillis();
@@ -75,10 +79,10 @@ public abstract class IBMModelAbstract {
 			iStart = 1;
 		}
 
-		tarDict = new Dictionary(target);
-		srcDict = new Dictionary(source, usingNull);
+		enDict = new Dictionary(targetFile);
+		foDict = new Dictionary(sourceFile, usingNull);
 
-		initSentPairs(target, source);
+		initSentPairs(targetFile, sourceFile);
 
 		long end = System.currentTimeMillis();
 
@@ -119,14 +123,14 @@ public abstract class IBMModelAbstract {
 
 			System.out.print("Loading target language dictionary...");
 			start = System.currentTimeMillis();
-			tarDict = Utils.loadObject(enFileName);
+			enDict = Utils.loadObject(enFileName);
 			end = System.currentTimeMillis();
 			time = end - start;
 			System.out.println(" [" + time + " ms]");
 
 			System.out.print("Loading source language dictionary...");
 			start = System.currentTimeMillis();
-			srcDict = Utils.loadObject(foFileName);
+			foDict = Utils.loadObject(foFileName);
 			end = System.currentTimeMillis();
 			time = end - start;
 			System.out.println(" [" + time + " ms]");
@@ -142,7 +146,7 @@ public abstract class IBMModelAbstract {
 			e.printStackTrace();
 		}
 
-		usingNull = srcDict.isForeign();
+		usingNull = foDict.isForeign();
 		if (usingNull) {
 			iStart = 0;
 		} else {
@@ -153,8 +157,8 @@ public abstract class IBMModelAbstract {
 	public IBMModelAbstract(IBMModelAbstract md) {
 		this.usingNull = md.usingNull;
 		this.iStart = md.iStart;
-		this.tarDict = md.tarDict;
-		this.srcDict = md.srcDict;
+		this.enDict = md.enDict;
+		this.foDict = md.foDict;
 		this.sentPairs = md.sentPairs;
 		this.t = md.t;
 	}
@@ -174,14 +178,14 @@ public abstract class IBMModelAbstract {
 	}
 
 	protected void initTotalT() {
-		totalT = new double[srcDict.size()];
+		totalT = new double[foDict.size()];
 	}
 
 	protected void initTransProbs() {
 		t = new TObjectDoubleHashMap<WordPair>();
 
 		// uniform distribution
-		double value = 1 / (double) tarDict.size();
+		double value = 1 / (double) enDict.size();
 
 		for (SentencePair p : sentPairs) {
 			for (int j = 1; j <= p.getE().length(); j++) {
@@ -207,7 +211,8 @@ public abstract class IBMModelAbstract {
 				String[] enLineWords = enLine.split("\\s+");
 				String[] foLineWords = foLine.split("\\s+");
 
-				if (enLineWords.length > 100 || foLineWords.length > 100) {
+				if (enLineWords.length > MAX_LENGTH || foLineWords.length > MAX_LENGTH || enLineWords.length < 2
+						|| foLineWords.length < 2) {
 					continue;
 				}
 
@@ -215,11 +220,11 @@ public abstract class IBMModelAbstract {
 				int[] foArray = new int[foLineWords.length];
 
 				for (int i = 0; i < enArray.length; i++) {
-					enArray[i] = tarDict.getIndex(enLineWords[i]);
+					enArray[i] = enDict.getIndex(enLineWords[i]);
 				}
 
 				for (int i = 0; i < foArray.length; i++) {
-					foArray[i] = srcDict.getIndex(foLineWords[i]);
+					foArray[i] = foDict.getIndex(foLineWords[i]);
 				}
 
 				sentPairs.add(new SentencePair(new Sentence(enArray), new Sentence(foArray, usingNull)));
@@ -235,10 +240,10 @@ public abstract class IBMModelAbstract {
 	}
 
 	public double getTransProb(String tarWord, String srcWord) {
-		if (!tarDict.containsWord(tarWord) || !srcDict.containsWord(srcWord)) {
+		if (!enDict.containsWord(tarWord) || !foDict.containsWord(srcWord)) {
 			return 0.0;
 		}
-		return getProb(tarDict.getIndex(tarWord), srcDict.getIndex(srcWord));
+		return getProb(enDict.getIndex(tarWord), foDict.getIndex(srcWord));
 	}
 
 	public double getProb(int e, int f) {
@@ -250,27 +255,27 @@ public abstract class IBMModelAbstract {
 	}
 
 	public Dictionary getTarDict() {
-		return tarDict;
+		return enDict;
 	}
 
 	public Dictionary getSourceDict() {
-		return srcDict;
+		return foDict;
 	}
 
 	public void printModels() {
-		if (tarDict.size() > 10 || srcDict.size() > 10) {
+		if (enDict.size() > 10 || foDict.size() > 10) {
 			return;
 		}
 
 		System.out.println("Translation probabilities:");
 		System.out.print("\t");
-		for (int e = 0; e < tarDict.size(); e++) {
-			System.out.print(tarDict.getWord(e) + "\t");
+		for (int e = 0; e < enDict.size(); e++) {
+			System.out.print(enDict.getWord(e) + "\t");
 		}
 		System.out.println();
-		for (int f = 0; f < srcDict.size(); f++) {
-			System.out.print(srcDict.getWord(f) + "\t");
-			for (int e = 0; e < tarDict.size(); e++) {
+		for (int f = 0; f < foDict.size(); f++) {
+			System.out.print(foDict.getWord(f) + "\t");
+			for (int e = 0; e < enDict.size(); e++) {
 				System.out.print(formatter.format(getProb(e, f)) + "\t");
 			}
 			System.out.println();
@@ -281,8 +286,8 @@ public abstract class IBMModelAbstract {
 		if (sentPairs != null) {
 			System.out.println("Number of sentence pairs: " + sentPairs.size());
 		}
-		System.out.println("Target language dictionary size: " + tarDict.size());
-		System.out.println("Source language dictionary size: " + srcDict.size());
+		System.out.println("Target language dictionary size: " + enDict.size());
+		System.out.println("Source language dictionary size: " + foDict.size());
 	}
 
 	public void save(String folder) throws IOException {
@@ -310,11 +315,11 @@ public abstract class IBMModelAbstract {
 
 		// Save english dictionary
 		String enFileName = folder + IConstants.enDictName;
-		Utils.saveObject(tarDict, enFileName);
+		Utils.saveObject(enDict, enFileName);
 
 		// Save foreign dictionary
 		String foFileName = folder + IConstants.foDictName;
-		Utils.saveObject(srcDict, foFileName);
+		Utils.saveObject(foDict, foFileName);
 	}
 
 }

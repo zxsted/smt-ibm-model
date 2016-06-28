@@ -32,8 +32,8 @@ public class IBMModel1 extends IBMModelAbstract {
 		super(model);
 	}
 
-	public IBMModel1(String enFile, String foFile, boolean usingNull) {
-		super(enFile, foFile, usingNull);
+	public IBMModel1(String targetFile, String sourceFile, boolean usingNull) {
+		super(targetFile, sourceFile, usingNull);
 	}
 
 	public IBMModel1(IBMModel1 md) {
