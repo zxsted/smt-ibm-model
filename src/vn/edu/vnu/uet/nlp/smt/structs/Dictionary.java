@@ -54,7 +54,7 @@ public class Dictionary implements Serializable {
 
 		try {
 			br = Files.newBufferedReader(Paths.get(filename), StandardCharsets.UTF_8);
-			int count = dict.size();
+			int count = dict.size(); // 0 or 1
 			for (String line; (line = br.readLine()) != null;) {
 				if (line.isEmpty()) {
 					continue;
@@ -71,6 +71,15 @@ public class Dictionary implements Serializable {
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
+		}
+	}
+
+	public void put(String word) {
+		if (this.containsWord(word)) {
+			return;
+		} else {
+			dict.put(word, dict.size());
+			reverseDict.put(reverseDict.size(), word);
 		}
 	}
 

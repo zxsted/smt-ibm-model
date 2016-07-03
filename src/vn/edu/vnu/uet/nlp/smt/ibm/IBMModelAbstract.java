@@ -39,33 +39,34 @@ import vn.edu.vnu.uet.nlp.smt.utils.Utils;
  *
  */
 public abstract class IBMModelAbstract {
-	NumberFormat formatter = new DecimalFormat("#0.0000");
+	public static final NumberFormat formatter = new DecimalFormat("#0.0000");
 
-	List<SentencePair> sentPairs;
+	protected List<SentencePair> sentPairs;
 
-	Dictionary enDict;
-	Dictionary foDict;
+	protected Dictionary enDict;
+	protected Dictionary foDict;
 
-	TObjectDoubleHashMap<WordPair> t; // translation probability table t(e|f)
-	TObjectDoubleHashMap<WordPair> countT;
-	double[] totalT;
+	protected TObjectDoubleHashMap<WordPair> t; // translation probability table
+												// t(e|f)
+	protected TObjectDoubleHashMap<WordPair> countT;
+	protected double[] totalT;
 
 	public static int MAX_ITER_1 = 5;
 	public static int MAX_ITER_2 = 5;
 	public static int MAX_ITER_3 = 3;
 
-	protected boolean CONVERGE = false;
-	boolean usingNull; // use NULL token in foreign sentences or not? Model 3
-						// requires usingNull = true
+	protected boolean usingNull; // use NULL token in foreign sentences or not?
+									// Model 3 requires usingNull = true
 
-	int iStart; // iteration starting point for foreign word (0 if use
-				// NULL token in foreign sentences or 1 otherwise)
+	protected int iStart; // iteration starting point for foreign word (0 if use
+							// NULL token in foreign sentences or 1 otherwise)
 
-	static final double alpha = 1E-3; // use for Laplace smoothing
+	static final double alpha = 1E-2; // use for Laplace smoothing
 	static final double MIN_PROB_VALUE = 1E-5;
 	static final double MIN_SCORE_VALUE = 1E-5;
+	static final double MIN_SCORE_LOG_VALUE = -1E6;
 
-	public static int MAX_LENGTH = 30;
+	public static int MAX_LENGTH = 40;
 
 	public IBMModelAbstract(String targetFile, String sourceFile, final boolean usingNull) {
 		System.out.print("Reading training data...");
@@ -243,10 +244,10 @@ public abstract class IBMModelAbstract {
 		if (!enDict.containsWord(tarWord) || !foDict.containsWord(srcWord)) {
 			return 0.0;
 		}
-		return getProb(enDict.getIndex(tarWord), foDict.getIndex(srcWord));
+		return getTransProb(enDict.getIndex(tarWord), foDict.getIndex(srcWord));
 	}
 
-	public double getProb(int e, int f) {
+	public double getTransProb(int e, int f) {
 		WordPair ef = new WordPair(e, f);
 		if (t.contains(ef)) {
 			return t.get(ef);
@@ -276,7 +277,7 @@ public abstract class IBMModelAbstract {
 		for (int f = 0; f < foDict.size(); f++) {
 			System.out.print(foDict.getWord(f) + "\t");
 			for (int e = 0; e < enDict.size(); e++) {
-				System.out.print(formatter.format(getProb(e, f)) + "\t");
+				System.out.print(formatter.format(getTransProb(e, f)) + "\t");
 			}
 			System.out.println();
 		}

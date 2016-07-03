@@ -107,8 +107,7 @@ public class IBMModel2 extends IBMModel1 {
 		System.out.println(" [" + initTime + " ms]");
 
 		System.out.println("Start training IBM Model 2...");
-		int iter = 1;
-		while (!CONVERGE) {
+		for (int iter = 1; iter <= MAX_ITER_2; iter++) {
 			System.out.print("Iteration " + iter);
 
 			long start = System.currentTimeMillis();
@@ -132,7 +131,7 @@ public class IBMModel2 extends IBMModel1 {
 
 					for (int i = iStart; i <= lf; i++) {
 						WordPair ef = p.getWordPair(j, i);
-						subTotal += t.get(ef) * a[i][j][le][lf] + alpha;
+						subTotal += t.get(ef) * a[i][j][le][lf];
 					}
 
 					// collect counts
@@ -140,7 +139,7 @@ public class IBMModel2 extends IBMModel1 {
 						int f = p.getF().get(i);
 						WordPair ef = p.getWordPair(j, i);
 
-						double c = (t.get(ef) * a[i][j][le][lf] + alpha) / subTotal;
+						double c = t.get(ef) * a[i][j][le][lf] / subTotal;
 
 						if (countT.containsKey(ef)) {
 							countT.put(ef, countT.get(ef) + c);
@@ -179,16 +178,7 @@ public class IBMModel2 extends IBMModel1 {
 			long time = end - start;
 
 			System.out.println(" [" + time + " ms]");
-
-			// printTransProbs();
-
-			iter++;
-			if (iter > MAX_ITER_2) {
-				CONVERGE = true;
-			}
 		}
-
-		CONVERGE = false; // to be continuously used in IBM Model 3
 	}
 
 	private void initTotalA() {
