@@ -32,7 +32,7 @@ import vn.edu.vnu.uet.nlp.smt.structs.SentencePair;
 import vn.edu.vnu.uet.nlp.smt.structs.WordPair;
 
 public class IBMModel1Extended extends IBMModel1 {
-	static final double epsilon = 1E-7;
+	static final double epsilon = 1E-5;
 
 	List<LabeledSentencePair> labeledSentPairs;
 	Set<WordPair> alignedWordPairs;
@@ -72,7 +72,7 @@ public class IBMModel1Extended extends IBMModel1 {
 	}
 
 	private void optimizeParameters() {
-		for (int iter = 1; iter <= 10; iter++) {
+		for (int iter = 1; iter <= 5; iter++) {
 			System.out.print("Iteration " + iter);
 
 			long start = System.currentTimeMillis();
