@@ -17,10 +17,10 @@ public class RunOption {
 	@Option(name = "-n1", usage = "number of iteration for Model 1")
 	int n1;
 
-	@Option(name = "-n2", usage = "number of iteration for Model 1")
+	@Option(name = "-n2", usage = "number of iteration for Model 2")
 	int n2;
 
-	@Option(name = "-n3", usage = "number of iteration for Model 1")
+	@Option(name = "-n3", usage = "number of iteration for Model 3")
 	int n3;
 
 	@Option(name = "-l", usage = "maximum length of a sentence (default: 30)")

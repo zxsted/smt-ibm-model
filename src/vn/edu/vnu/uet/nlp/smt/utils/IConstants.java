@@ -27,6 +27,8 @@ public interface IConstants {
 	static final String fertilityModelName = "fertility.smt";
 	static final String nullInsertionModelName = "null.smt";
 	static final String sentFileName = "sent_pairs.smt";
+	static final String defaultTransProbs = "default_trans.smt";
+	static final String distanceFile = "distance.smt";
 
 	static final String NULLTOKEN = "NUll";
 	static final int NULLINDEX = 0;

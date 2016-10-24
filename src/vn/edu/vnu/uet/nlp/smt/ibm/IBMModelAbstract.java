@@ -61,12 +61,14 @@ public abstract class IBMModelAbstract {
 	protected int iStart; // iteration starting point for foreign word (0 if use
 							// NULL token in foreign sentences or 1 otherwise)
 
-	static final double alpha = 1E-2; // use for Laplace smoothing
+	static final double alpha = 1E-4; // use for Laplace smoothing
 	static final double MIN_PROB_VALUE = 1E-5;
 	static final double MIN_SCORE_VALUE = 1E-5;
 	static final double MIN_SCORE_LOG_VALUE = -1E6;
 
-	public static int MAX_LENGTH = 40;
+	private static final double smoothProb = 0;
+
+	public static int MAX_LENGTH = 50;
 
 	public IBMModelAbstract(String targetFile, String sourceFile, final boolean usingNull) {
 		System.out.print("Reading training data...");
@@ -113,6 +115,7 @@ public abstract class IBMModelAbstract {
 		String enFileName = model + IConstants.enDictName;
 		String foFileName = model + IConstants.foDictName;
 		// String sentFileName = model + IConstants.sentFileName;
+		String defaultTFileName = model + IConstants.defaultTransProbs;
 
 		try {
 			System.out.print("Loading translation probability...");
@@ -142,6 +145,13 @@ public abstract class IBMModelAbstract {
 			// end = System.currentTimeMillis();
 			// time = end - start;
 			// System.out.println(" [" + time + " ms]");
+
+			System.out.print("Loading default translation probability...");
+			start = System.currentTimeMillis();
+			defaultT = Utils.loadObject(defaultTFileName);
+			end = System.currentTimeMillis();
+			time = end - start;
+			System.out.println(" [" + time + " ms]");
 
 		} catch (IOException | ClassNotFoundException e) {
 			e.printStackTrace();
@@ -212,8 +222,8 @@ public abstract class IBMModelAbstract {
 				String[] enLineWords = enLine.split("\\s+");
 				String[] foLineWords = foLine.split("\\s+");
 
-				if (enLineWords.length > MAX_LENGTH || foLineWords.length > MAX_LENGTH || enLineWords.length < 2
-						|| foLineWords.length < 2) {
+				if (enLineWords.length > MAX_LENGTH || foLineWords.length > MAX_LENGTH
+						|| enLineWords.length + foLineWords.length < 2) {
 					continue;
 				}
 
@@ -229,10 +239,6 @@ public abstract class IBMModelAbstract {
 				}
 
 				sentPairs.add(new SentencePair(new Sentence(enArray), new Sentence(foArray, usingNull)));
-
-				// if (++count % 1000 == 0) {
-				// System.out.println(count + " sentences");
-				// }
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -242,8 +248,13 @@ public abstract class IBMModelAbstract {
 
 	public double getTransProb(String tarWord, String srcWord) {
 		if (!enDict.containsWord(tarWord) || !foDict.containsWord(srcWord)) {
-			return 0.0;
+			if (tarWord.equals(srcWord)) {
+				return 1.0;
+			} else {
+				return smoothProb;
+			}
 		}
+
 		return getTransProb(enDict.getIndex(tarWord), foDict.getIndex(srcWord));
 	}
 
@@ -252,10 +263,11 @@ public abstract class IBMModelAbstract {
 		if (t.contains(ef)) {
 			return t.get(ef);
 		}
-		return 0.0;
+
+		return smoothProb;
 	}
 
-	public Dictionary getTarDict() {
+	public Dictionary getTrgDict() {
 		return enDict;
 	}
 
@@ -321,6 +333,33 @@ public abstract class IBMModelAbstract {
 		// Save foreign dictionary
 		String foFileName = folder + IConstants.foDictName;
 		Utils.saveObject(foDict, foFileName);
+
+		// Save default probabilities
+		String defaultTFileName = folder + IConstants.defaultTransProbs;
+		Utils.saveObject(defaultT, defaultTFileName);
+	}
+
+	protected TObjectDoubleHashMap<Integer> defaultT;
+
+	protected void smoothT() {
+		initTotalT();
+		for (int f = 0; f < foDict.size(); f++) {
+			for (int e = 0; e < enDict.size(); e++) {
+				WordPair ef = new WordPair(e, f);
+				totalT[f] += (t.containsKey(ef)) ? (t.get(ef) + alpha) : alpha;
+			}
+		}
+
+		Set<WordPair> keySet = t.keySet();
+		for (WordPair ef : keySet) {
+			t.put(ef, (t.get(ef) + alpha) / totalT[ef.getF()]);
+		}
+
+		defaultT = new TObjectDoubleHashMap<Integer>();
+
+		for (int f = 0; f < foDict.size(); f++) {
+			defaultT.put(f, alpha / totalT[f]);
+		}
 	}
 
 }
