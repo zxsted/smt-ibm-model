@@ -4,3 +4,4 @@
 *.jar
 target/
 src/vn/edu/vnu/uet/nlp/smt/alignment/
+src/vn/edu/vnu/uet/nlp/smt/w2v/
